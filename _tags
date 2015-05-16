@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: a06f7038ecb1d9001e09d7d14e091991)
+# DO NOT EDIT (digest: 5275be85c0df09c81a54ac13991dd79c)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -18,6 +18,8 @@ true: annot, bin_annot
 # Executable ppx_reqtrace
 <src/ppx_reqtrace.{native,byte}>: package(compiler-libs)
 <src/ppx_reqtrace.{native,byte}>: package(compiler-libs.common)
+<src/ppx_reqtrace.{native,byte}>: package(ezxmlm)
 <src/*.ml{,i,y}>: package(compiler-libs)
 <src/*.ml{,i,y}>: package(compiler-libs.common)
+<src/*.ml{,i,y}>: package(ezxmlm)
 # OASIS_STOP

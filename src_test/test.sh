@@ -11,7 +11,7 @@ if diff -u _build/example_req.ml.ast _build/example_noreq.ml.ast >/dev/null ; th
     exit 1
 fi
 
-ocamlfind ppx_tools/dumpast -ppx $ppx_reqtrace src_test/example_req.ml | tail -n +2 > _build/example_req.ml.ppx.ast
+ocamlfind ppx_tools/dumpast -ppx "$ppx_reqtrace _build/example_req.ml.req" src_test/example_req.ml | tail -n +2 > _build/example_req.ml.ppx.ast
 diff -u _build/example_noreq.ml.ast _build/example_req.ml.ppx.ast
 
 #ocamlfind ppx_tools/dumpast -ppx $ppx_reqtrace src_test/example_cstruct | tail -n +2 > _build/example_req.ml.ppx.ast

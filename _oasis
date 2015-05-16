@@ -31,7 +31,7 @@ Executable ppx_reqtrace
   #Custom:             true
   CompiledObject:     best
   Install:            false
-  BuildDepends:       compiler-libs, compiler-libs.common
+  BuildDepends:       compiler-libs, compiler-libs.common, ezxmlm
 
 Test test
   Command:            src_test/test.sh $ppx_reqtrace
