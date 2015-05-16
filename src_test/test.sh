@@ -14,4 +14,6 @@ fi
 ocamlfind ppx_tools/dumpast -ppx "$ppx_reqtrace _build/example_req.ml.req" src_test/example_req.ml | tail -n +2 > _build/example_req.ml.ppx.ast
 diff -u _build/example_noreq.ml.ast _build/example_req.ml.ppx.ast
 
-#ocamlfind ppx_tools/dumpast -ppx $ppx_reqtrace src_test/example_cstruct | tail -n +2 > _build/example_req.ml.ppx.ast
+# For now we just make sure camlp4 doesn't fail, and ignore the output
+cstruct_dir=`ocamlfind query cstruct`
+ocamlfind ppx_tools/dumpast -pp "camlp4o -I $cstruct_dir cstruct-syntax.cma" -ppx $ppx_reqtrace src_test/example_cstruct.ml | tail -n +2 > _build/example_cstruct.ml.ppx.ast
