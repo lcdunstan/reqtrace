@@ -1,0 +1,39 @@
+OASISFormat: 0.4
+Name:        reqtrace
+Version:     0.1.0
+Authors:     Luke Dunstan
+Maintainers: Luke Dunstan <LukeDunstan81@gmail.com>
+License:     ISC
+Synopsis:    Requirements traceability tool via OCaml attributes.
+Description: Through the combination of indexing requiments specification
+  documents (especially IETF RFCs) and the use of attributes in OCaml
+  source code referring to specific requirements, this tool can produce
+  an annotated requirements specification that includes references to
+  the code that implements and/or tests each requirement.
+  This also allows unimplemented or untested requirements to be identified
+  automatically.
+Homepage:    https://github.com/infidel/reqtrace
+Plugins:     META (0.4)
+BuildTools:  ocamlbuild
+OCamlVersion: >= 4.02
+
+Executable reqannot
+  Path:               src
+  MainIs:             reqannot.ml
+  #Custom:             true
+  CompiledObject:     best
+  Install:            false
+  #BuildDepends:       lwt, lwt.unix, re, re.str, dns, dns.lwt
+
+Executable ppx_reqtrace
+  Path:               src
+  MainIs:             ppx_reqtrace.ml
+  #Custom:             true
+  CompiledObject:     best
+  Install:            false
+  BuildDepends:       compiler-libs, compiler-libs.common
+
+Test test
+  Command:            src_test/test.sh $ppx_reqtrace
+  TestTools:          ppx_reqtrace
+
