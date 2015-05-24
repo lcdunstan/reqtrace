@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 5275be85c0df09c81a54ac13991dd79c)
+# DO NOT EDIT (digest: d322f28e135a40e5cbc20fdc27e92344)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -14,12 +14,21 @@ true: annot, bin_annot
 ".git": not_hygienic
 "_darcs": -traverse
 "_darcs": not_hygienic
-# Executable reqannot
 # Executable ppx_reqtrace
 <src/ppx_reqtrace.{native,byte}>: package(compiler-libs)
 <src/ppx_reqtrace.{native,byte}>: package(compiler-libs.common)
 <src/ppx_reqtrace.{native,byte}>: package(ezxmlm)
+# Executable reqtrace
+<src/reqtrace.{native,byte}>: package(cmdliner)
+<src/reqtrace.{native,byte}>: package(compiler-libs)
+<src/reqtrace.{native,byte}>: package(compiler-libs.common)
+<src/reqtrace.{native,byte}>: package(ezxmlm)
+<src/reqtrace.{native,byte}>: package(stringext)
+<src/reqtrace.{native,byte}>: package(unix)
+<src/*.ml{,i,y}>: package(cmdliner)
 <src/*.ml{,i,y}>: package(compiler-libs)
 <src/*.ml{,i,y}>: package(compiler-libs.common)
 <src/*.ml{,i,y}>: package(ezxmlm)
+<src/*.ml{,i,y}>: package(stringext)
+<src/*.ml{,i,y}>: package(unix)
 # OASIS_STOP

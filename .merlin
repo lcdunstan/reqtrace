@@ -1,5 +1,6 @@
 PKG compiler-libs
 PKG ezxmlm xmlm
+PKG cmdliner
 PKG oUnit
 
 S src
