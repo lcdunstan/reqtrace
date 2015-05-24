@@ -56,7 +56,7 @@ let save_req filename =
   Ezxmlm.to_channel ch dtd [root];
   close_out ch
 
-let getenv s = try Sys.getenv s with Not_found -> ""
+let getenv s = try Some (Sys.getenv s) with Not_found -> None
 
 let run_main mapper =
   try
