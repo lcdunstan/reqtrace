@@ -1,0 +1,56 @@
+
+body {
+    font-family: sans-serif;
+    width: 70%;
+}
+
+div.paragraph {
+    margin-bottom: 10px;
+}
+
+div.clause {
+    display: block;
+}
+
+.label {
+    font-size: 80%;
+    display: inline-block;
+    background-color: #75df67;
+    border: solid 1px black;
+    border-radius: 5px;
+    margin: 1px 3px;
+    padding: 3px 5px;
+}
+
+.must {
+    background-color: #dddd33;
+}
+
+.should {
+    background-color: #aaaaff;
+}
+
+div.notes {
+    float: right;
+    background-color: #ffeeff;
+    width: 50%;
+    margin: 5px;
+    border: solid 1px black;
+    padding: 3px 5px;
+    font-size: 80%;
+}
+
+.hover {
+    /*border: solid 1px red;*/
+    color: red;
+}
+
+table {
+    border: solid 1px black;
+    border-collapse: collapse;
+}
+td, th {
+    border: solid 1px black;
+    padding: 3px 5px;
+}
+

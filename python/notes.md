@@ -1,0 +1,43 @@
+
+Ideas for traceability
+- Parse IETF RFCs into sections, paragraphs, clauses
+- Generate an XML file that can be annotated
+- Generate an HTML presentation of the annotated document
+- Possibly use ReqIF
+- Maybe implement a web-based editor for the annotated spec format
+
+Annotated RFC
+- XML format
+- RFC text
+    - Refer to SHA1 hash of plain text RFC
+    - Automatic internal cross-references?
+    - Automatic external cross-references?
+    - Tag if SHALL/SHOULD/etc present
+    - List of terms to be auto-indexed
+    - Page anchors
+- Notes
+    - Design/implementation notes (text)
+    - Testing notes (text)
+    - Importance (should/shall/etc)
+    - Implementation completeness %
+    - Test completeness %
+    - Tags
+    - Internal cross references
+        - Either file offsets or clause IDs
+    - External cross references
+    - Reference to implementation code
+    - Reference to test code
+    - Index entries for words/concepts
+- OCaml documentation comments
+    - Refer to clauses
+- Convert to HTML
+    - Float notes to the right of the RFC text
+    - Note tags -> CSS class
+    - Internal hyperlinks, including back-pointers
+    - External hyperlinks: RFCs, code, tests
+    - Collapsible sections?
+    - Automatic TOC?
+    - Summary of completeness, grouped by importance
+    - Index of words/concepts
+    - Index of multiple documents
+    - Page anchors
