@@ -12,3 +12,4 @@ setup.log
 *.cmx
 *.o
 __pycache__
+python/venv/

@@ -32,3 +32,5 @@ true: annot, bin_annot
 <src/*.ml{,i,y}>: package(stringext)
 <src/*.ml{,i,y}>: package(unix)
 # OASIS_STOP
+"python/venv": -traverse
+"python/venv": not_hygienic

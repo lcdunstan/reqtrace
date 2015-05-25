@@ -1,4 +1,4 @@
-.PHONY: all clean distclean setup build doc install reinstall mirclean mirtest test
+.PHONY: all clean distclean setup build doc install reinstall test otest pytest
 all: build
 
 J ?= 2
@@ -39,9 +39,14 @@ setup.bin: setup.ml
 	ocamlopt.opt -o $@ $< || ocamlopt -o $@ $< || ocamlc -o $@ $<
 	$(RM) setup.cmx setup.cmi setup.o setup.cmo
 
+test: otest pytest
+
 # https://forge.ocamlcore.org/tracker/index.php?func=detail&aid=1363&group_id=162&atid=730
-test: build
+otest: build
 	./setup.bin -test -runner sequential
+
+pytest:
+	cd ./python && ./test_parseietf.py
 
 coverage: build
 	rm -f lib_test/ounit/bisect*.out
