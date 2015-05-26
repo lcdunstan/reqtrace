@@ -126,10 +126,9 @@ let default_cmd =
         info exec_name ~version ~sdocs:global_option_section
           ~doc ~man)
 
-;;
-
-match Term.eval_choice default_cmd [
-    extract_cmd;
-] with
-| `Ok () | `Version | `Help -> exit 0
-| `Error _ -> exit 1
+let () =
+  match Term.eval_choice default_cmd [
+      extract_cmd;
+    ] with
+  | `Ok () | `Version | `Help -> exit 0
+  | `Error _ -> exit 1

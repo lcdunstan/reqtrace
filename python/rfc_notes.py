@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 
+import os
+import os.path
 import re
 import xml.etree.ElementTree as etree
 
+
+NS = "{https://github.com/infidel/reqtrace}"
 
 IMPORTANCES = [ 'must', 'should', 'may' ]
 IMPORTANCE_HEADINGS = {
@@ -37,11 +41,9 @@ def coderef_as_element(coderef):
     elem = etree.Element('div')
     elem.set('class', 'coderef')
     coderef_type = coderef.get('type', 'code')
-    repo = coderef.get('repo', '')
     path = coderef.get('path', '')
     line = coderef.get('line')
-    if repo == 'dns':
-        base = 'https://github.com/infidel/ocaml-dns/blob/master/'
+    base = 'https://github.com/infidel/ocaml-dns/blob/master/'  # TODO
     if base:
         elem.text = coderef_type + ': '
         url = base + path
@@ -72,7 +74,7 @@ def ref_as_element(ref):
     return elem
 
 
-def notes_as_element(note, target_id):
+def notes_as_element(note, target_id, refs):
     elem = etree.Element('div')
     if target_id:
         elem.set('onmouseover', "addClass(document.getElementById('{0}'), 'hover')".format(target_id))
@@ -86,11 +88,15 @@ def notes_as_element(note, target_id):
             elem.append(coderef_as_element(child))
         elif child.tag == 'ref':
             elem.append(ref_as_element(child))
+    if target_id in refs.references:
+        for ref in refs.references[target_id]:
+            elem.append(coderef_as_element(ref.as_xml()))
+        del refs.references[target_id]
     elem.tail = '\n\n'
     return elem
 
 
-def clause_as_element(clause):
+def clause_as_element(clause, refs):
     elem = etree.Element('div')
     id = clause.get('id')
     if id:
@@ -102,6 +108,15 @@ def clause_as_element(clause):
     if importance:
         css_class += ' ' + importance
     elem.set('class', css_class)
+
+    # For editing the XML it is nicer to have <notes> after
+    # the text, but for the HTML it looks better before the text.
+    for notes in clause.findall('notes'):
+        elem.append(notes_as_element(notes, id, refs))
+    if id in refs.references:
+        #import pdb; pdb.set_trace()
+        elem.insert(0, notes_as_element(etree.Element('notes'), id, refs))
+
     label = etree.Element('span')
     label.set('class', 'label')
     label.text = id
@@ -111,7 +126,7 @@ def clause_as_element(clause):
     return elem
 
 
-def paragraph_as_element(paragraph, section):
+def paragraph_as_element(paragraph, section, refs):
     elem = etree.Element('div')
     elem.set('class', 'paragraph')
     elem.text = '\n'
@@ -125,21 +140,22 @@ def paragraph_as_element(paragraph, section):
     else:
         for child in paragraph:
             if child.tag == 'clause':
-                clause = clause_as_element(child)
+                clause = clause_as_element(child, refs)
                 elem.append(clause)
-                # For editing the XML it is nicer to have <notes> after
-                # the text, but for the HTML it looks better before the text.
-                for i, notes in enumerate(child.findall('notes')):
-                    clause.insert(0, notes_as_element(notes, child.get('id')))
             elif child.tag == 'line':
                 elem.append(line_as_element(child))
             elif child.tag == 'notes':
-                elem.insert(0, notes_as_element(child, id))
+                div = notes_as_element(child, id, refs)
+                if first_notes is None:
+                    first_notes = child
+                elem.insert(0, div)
+        if id in refs.references:
+            elem.insert(0, notes_as_element(etree.Element('notes'), id, refs))
     elem.tail = '\n\n'
     return elem
 
 
-def section_as_elements(section):
+def section_as_elements(section, refs):
     h = etree.Element('h2')
     elements = [h]
     name = section.get('name')
@@ -156,9 +172,9 @@ def section_as_elements(section):
     h.tail = '\n\n'
     for child in section:
         if child.tag == 'paragraph':
-            elements.append(paragraph_as_element(child, section))
+            elements.append(paragraph_as_element(child, section, refs))
         elif child.tag == 'notes':
-            elements.insert(0, notes_as_element(child, id))
+            elements.insert(0, notes_as_element(child, id, refs))
     return elements
 
 
@@ -186,7 +202,6 @@ def table_of_clauses(clauses):
         td_notes = etree.SubElement(tr, 'td')
         if clause.find('notes'):
             td_notes.text = 'Yes'
-            #import pdb; pdb.set_trace()
         td_impl = etree.SubElement(tr, 'td')
         impl = clause.findall(".//coderef[@type='impl']")
         if impl:
@@ -221,7 +236,7 @@ def index_clauses(root):
     return elements
 
 
-def root_as_html(xml):
+def root_as_html(xml, refs):
     root = etree.Element('html',
             xmlns='http://www.w3.org/1999/xhtml')
 
@@ -253,12 +268,40 @@ def root_as_html(xml):
 
     sections = xml.find('sections')
     for section in sections.findall('section'):
-        body.extend(section_as_elements(section))
+        body.extend(section_as_elements(section, refs))
     body.extend(index_clauses(xml))
     body.tail = '\n'
     root.append(body)
 
     return b'<!DOCTYPE html>\n' + etree.tostring(root)
+
+
+class Reference:
+    def __init__(self, id, filename, linenum):
+        self.id = id
+        self.filename = filename
+        self.linenum = linenum
+
+    def as_xml(self):
+        type = 'impl'
+        if self.filename.find('test') != -1:
+            type = 'test'
+        return etree.Element('coderef', type=type, path=self.filename, line=str(self.linenum))
+
+
+class References:
+    def __init__(self):
+        self.references = {}
+
+    def load(self, path):
+        doc = etree.parse(path)
+        root = doc.getroot()
+        for reqref in root.findall(NS + 'reqref'):
+            reqid = reqref.find(NS + 'reqid').text
+            loc = reqref.find(NS + 'loc')
+            ref = Reference(reqid, loc.get('filename'), int(loc.get('linenum')))
+            l = self.references.setdefault(reqid, [])
+            l.append(ref)
 
 
 def main():
@@ -268,11 +311,25 @@ def main():
             help='The path to the input XML document (.xml)')
     parser.add_argument('--html', dest='output_html', nargs=1, type=str,
             help='The path to an HTML output file')
+    parser.add_argument('--ref', dest='ref', nargs='+', type=str,
+            help='The path to one or more input XML files containing requirement references extracted from OCaml code')
     args = parser.parse_args()
 
     doc = etree.parse(args.input[0])
+
+    refs = References()
+    if args.ref:
+        for ref_path in args.ref:
+            if os.path.isdir(ref_path):
+                for dirpath, dirnames, filenames in os.walk(ref_path):
+                    for filename in filenames:
+                        if filename.endswith('.req'):
+                            refs.load(os.path.join(dirpath, filename))
+            else:
+                refs.load(ref_path)
+
     if args.output_html:
-        html = root_as_html(doc.getroot())
+        html = root_as_html(doc.getroot(), refs)
         with open(args.output_html[0], 'wb') as f:
             f.write(html)
 

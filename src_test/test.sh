@@ -22,4 +22,4 @@ ocamlfind ppx_tools/dumpast -pp "camlp4o -I $cstruct_dir cstruct-syntax.cma" -pp
 cp -f src_test/example_req.ml _build/src_test/
 ocamlc -bin-annot -c _build/src_test/example_req.ml
 ./reqtrace.native extract _build/src_test/example_req.cmt
-
+./python/rfc_notes.py src_test/example_spec.xml --ref _build/src_test/example_req.req --html _build/src_test/example_spec.html

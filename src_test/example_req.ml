@@ -1,4 +1,4 @@
 
 let hello =
-  Printf.printf "Hello, World!\n" [@req "foo1.2"]
+  Printf.printf "Hello, World!\n" [@req "s2_p1_c1"]
 

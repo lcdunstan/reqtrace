@@ -1,0 +1,71 @@
+<rfc number="6762" sha1="fcb13130ee945fea97631dfc875e677f63b9a76c" title="Multicast DNS">
+<header>
+<value name="Category">Standards Track</value>
+<value name="ISSN">2070-1721</value>
+<value name="Request for Comments">6762</value>
+</header>
+
+<sections>
+
+<section id="s1" name="Introduction" num="1">
+<paragraph id="s1_p1" num="1">
+<clause id="s1_p1_c1" num="1">
+<linesub end="6493" start="6370">Multicast DNS and its companion technology DNS-Based Service</linesub>
+<linesub end="6569" start="6434">Discovery [RFC6763] were created to provide IP networking with the</linesub>
+<linesub end="6643" start="6504">ease-of-use and autoconfiguration for which AppleTalk was well-known</linesub>
+<linesub end="6658" start="6576">[RFC6760].</linesub>
+</clause>
+<clause id="s1_p1_c2" num="2">
+<linesub end="6717" start="6588">When reading this document, familiarity with the concepts</linesub>
+<linesub end="6788" start="6649">of Zero Configuration Networking [Zeroconf] and automatic link-local</linesub>
+<linesub end="6808" start="6721">addressing [RFC3927] [RFC4862] is helpful.</linesub>
+</clause>
+</paragraph>
+
+<paragraph id="s1_p2" num="2">
+<clause id="s1_p2_c1" num="1">
+<linesub end="6891" start="6768">Multicast DNS borrows heavily from the existing DNS protocol</linesub>
+<linesub end="6957" start="6832">[RFC1034] [RFC1035] [RFC6195], using the existing DNS message</linesub>
+<linesub end="7015" start="6897">structure, name syntax, and resource record types.</linesub>
+</clause>
+<clause id="s1_p2_c2" num="2">
+<linesub end="7030" start="6949">This document</linesub>
+<linesub end="7086" start="6966">specifies no new operation codes or response codes.</linesub>
+</clause>
+<clause id="s1_p2_c3" num="3">
+<linesub end="7101" start="7019">This document</linesub>
+<linesub end="7177" start="7036">describes how clients send DNS-like queries via IP multicast, and how</linesub>
+<linesub end="7248" start="7109">a collection of hosts cooperate to collectively answer those queries</linesub>
+<linesub end="7222" start="7181">in a useful manner.</linesub>
+</clause>
+</paragraph>
+
+</section>
+
+<section id="s2" name="Conventions and Terminology Used in This Document" num="2">
+<paragraph id="s2_p1" num="1">
+<clause id="s2_p1_c1" num="1">
+<linesub end="7397" start="7260">The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",</linesub>
+<linesub end="7470" start="7331">"SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this</linesub>
+<linesub end="7542" start="7403">document are to be interpreted as described in "Key words for use in</linesub>
+<linesub end="7572" start="7475">RFCs to Indicate Requirement Levels" [RFC2119].</linesub>
+</clause>
+</paragraph>
+
+<paragraph id="s2_p2" num="2">
+<clause id="s2_p2_c1" num="1">
+<linesub end="7666" start="7527">When this document uses the term "Multicast DNS", it should be taken</linesub>
+<linesub end="7736" start="7599">to mean: "Clients performing DNS-like queries for DNS-like resource</linesub>
+<linesub end="7807" start="7670">records by sending DNS-like UDP query and response messages over IP</linesub>
+<linesub end="7840" start="7741">Multicast to UDP port 5353".</linesub>
+</clause>
+<clause id="s2_p2_c2" num="2">
+<linesub end="7880" start="7771">The design rationale for selecting UDP</linesub>
+<linesub end="7890" start="7813">port 5353 is discussed in Appendix A.</linesub>
+</clause>
+</paragraph>
+
+</section>
+
+</sections>
+</rfc>
