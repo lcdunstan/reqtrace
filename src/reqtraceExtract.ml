@@ -101,7 +101,7 @@ let only_cmt file path =
 let all_cmts dir =
   ReqtraceUtil.foldp_paths (fun lst rel_cmt -> rel_cmt::lst) only_cmt [] dir
 
-let extract cmt out_dir rel_xml =
+let extract ?strip cmt out_dir rel_xml =
   let xml = out_dir / rel_xml in
   let dirs = [Dir.name xml] in
   (* here, we rely on umask to set the perms correctly *)
@@ -113,15 +113,15 @@ let extract cmt out_dir rel_xml =
     | `Ok unit ->
       let oc = open_out xml in
       let xout = Xmlm.make_output (`Channel oc) in
-      ReqtraceXml.output_impl_unit xout unit;
+      ReqtraceXml.output_impl_unit ?strip xout unit;
       close_out oc;
       `Ok unit
 
-let extract_file in_file out_dir xml_file =
+let extract_file ?strip in_file out_dir xml_file =
   ReqtraceUtil.map_ret (fun _ -> ())
-    (extract in_file out_dir xml_file)
+    (extract ?strip in_file out_dir xml_file)
 
-let run_dir in_dir out_dir =
+let run_dir ?strip in_dir out_dir =
   let cmts = all_cmts in_dir in
   let cmt_count = List.length cmts in
   Printf.printf
@@ -129,7 +129,7 @@ let run_dir in_dir out_dir =
   match List.fold_left (fun (units,errs) rel_cmt ->
       let rel_dir = Dir.name rel_cmt in
       let xml_file = xml_index_of_cmt rel_cmt in
-      match extract (in_dir / rel_cmt) out_dir (rel_dir / xml_file)
+      match extract ?strip (in_dir / rel_cmt) out_dir (rel_dir / xml_file)
       with
       | `Ok unit -> (unit::units, errs)
       | `Error err -> (units, (`Error err)::errs)
@@ -138,9 +138,10 @@ let run_dir in_dir out_dir =
   | _, ((_::_) as errs) -> combine_errors errs
   | units, [] -> `Ok (`Dir out_dir)
 
-let run output path =
+let run strip output path =
   match path, output with
-  | `Missing path, _ -> Error.source_missing path
+  | `Missing path, _ ->
+    Error.source_missing path
   | `File in_file, _ when not (Filename.check_suffix in_file ".cmt") ->
     `Error (false, "source "^in_file^" is not a cmt")
   | `File in_file, None ->
@@ -148,19 +149,21 @@ let run output path =
     let out_dir = Dir.name in_file in
     ReqtraceUtil.map_ret
       (fun () -> `File xml_file)
-      (extract_file in_file out_dir xml_file)
+      (extract_file ?strip in_file out_dir xml_file)
   | `File in_file, Some (`Missing out_file | `File out_file) ->
     (* simple doc gen *)
     let out_dir = Dir.name out_file in
     let rel_file = Filename.basename out_file in
     ReqtraceUtil.map_ret
       (fun () -> `File out_file)
-      (extract_file in_file out_dir rel_file)
+      (extract_file ?strip in_file out_dir rel_file)
   | `File in_file, Some (`Dir out_dir) ->
     ReqtraceUtil.map_ret (fun _ -> `Dir out_dir)
-      (extract in_file out_dir (xml_index_of_cmt in_file))
-  | `Dir in_dir, None -> run_dir in_dir in_dir
+      (extract ?strip in_file out_dir (xml_index_of_cmt in_file))
+  | `Dir in_dir, None ->
+    run_dir ?strip in_dir in_dir
   | `Dir in_dir, Some (`Missing out_dir | `Dir out_dir) ->
-    run_dir in_dir out_dir
-  | `Dir in_dir, Some (`File out_file) -> Error.dir_to_file in_dir out_file
+    run_dir ?strip in_dir out_dir
+  | `Dir in_dir, Some (`File out_file) ->
+    Error.dir_to_file in_dir out_file
 

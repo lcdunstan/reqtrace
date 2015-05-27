@@ -18,8 +18,11 @@ diff -u _build/example_noreq.ml.ast _build/example_req.ml.ppx.ast
 cstruct_dir=`ocamlfind query cstruct`
 ocamlfind ppx_tools/dumpast -pp "camlp4o -I $cstruct_dir cstruct-syntax.cma" -ppx $ppx_reqtrace src_test/example_cstruct.ml | tail -n +2 > _build/example_cstruct.ml.ppx.ast
 
+(cd ./python && ./test_parseietf.py)
+
 [ ! -d _build/src_test ] && mkdir _build/src_test
 cp -f src_test/example_req.ml _build/src_test/
 ocamlc -bin-annot -c _build/src_test/example_req.ml
-./reqtrace.native extract _build/src_test/example_req.cmt
-./python/rfc_notes.py src_test/example_spec.xml --ref _build/src_test/example_req.req --html _build/src_test/example_spec.html
+./reqtrace.native extract --strip=_build/ _build/src_test/example_req.cmt
+./python/rfc_notes.py src_test/example_spec.xml --ref=_build/src_test/example_req.req --html=_build/src_test/example_spec.html
+grep coderef _build/src_test/example_spec.html

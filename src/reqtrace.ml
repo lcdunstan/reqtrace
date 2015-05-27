@@ -97,6 +97,13 @@ let path_opt ~doc names =
 
 let output = path_opt ~doc:"the output path" ["o"]
 
+let strip =
+  Arg.(
+    value &
+    opt (some string) None &
+    info ~docv:"PREFIX" ~doc:"the path prefix to strip from code references" ["s"; "strip"]
+  )
+
 let extract_cmd =
   let doc = "extract references to requirements from cmt files into XML" in
   let man = [
@@ -109,7 +116,7 @@ let extract_cmd =
   in
   Term.(ret (pure (ReqtraceUtil.map_ret (fun _ -> ())) $
              (pure ReqtraceExtract.run
-              (*$ Common.term*)
+              $ strip
               $ output $ path')),
         info "extract" ~doc ~sdocs:global_option_section ~man)
 

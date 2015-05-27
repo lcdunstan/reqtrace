@@ -25,21 +25,34 @@ let attr name value = ((ns, name), value)
 let of_reqid reqid =
   make_tag "reqid" ([], [`Data reqid])
 
-let of_loc {Location.loc_start={Lexing.pos_fname=filename; Lexing.pos_lnum=linenum}} =
-  let attrs = [attr "filename" filename; attr "linenum" (string_of_int linenum)] in
+let strip_prefix str prefix =
+  let n = String.length prefix in
+  if String.length str > n && prefix = String.sub str 0 n then
+    String.sub str n (String.length str - n)
+  else
+    str
+
+let of_loc ?strip {Location.loc_start={Lexing.pos_fname=filename; Lexing.pos_lnum=linenum}} =
+  let stripped = match strip with
+    | None -> filename
+    | Some prefix -> strip_prefix filename prefix
+  in
+  let attrs = [
+    attr "filename" stripped;
+    attr "linenum" (string_of_int linenum)] in
   let nodes = [] in
   make_tag "loc" (attrs, nodes)
 
-let of_reqref {reqid=reqid; loc=loc} =
+let of_reqref ?strip {reqid=reqid; loc=loc} =
   let attrs = [] in
-  let nodes = [of_reqid reqid; of_loc loc] in
+  let nodes = [of_reqid reqid; of_loc ?strip loc] in
   make_tag "reqref" (attrs, nodes)
 
-let of_impl_unit {refs=refs} =
+let of_impl_unit ?strip {refs=refs} =
   let attrs = [(Xmlm.ns_xmlns, "xmlns"), ns] in
-  let nodes = List.map of_reqref refs in
+  let nodes = List.map (of_reqref ?strip) refs in
   make_tag "impl" (attrs, nodes)
 
-let output_impl_unit xmlout impl =
-  to_output xmlout (None, of_impl_unit impl)
+let output_impl_unit ?strip xmlout impl =
+  to_output xmlout (None, of_impl_unit ?strip impl)
 
