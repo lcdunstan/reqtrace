@@ -21,6 +21,7 @@ open Parsetree
 open Typedtree
 
 type state = {
+  mutable doc : string;
   mutable refs : reqref list;
 }
 
@@ -28,6 +29,18 @@ let read_attribute state attribute =
   let open Parsetree in
   let open Asttypes in
   match attribute with
+  | ({ txt = "reqdoc"; loc = attr_loc}, payload) ->
+    begin match payload with
+      | (* Should have a single structure item, which is evaluation of a constant string. *)
+        PStr [{ pstr_desc =
+                  Pstr_eval ({ pexp_loc  = loc;
+                               pexp_desc = Pexp_constant (Const_string (sym, None))}, _)}] ->
+        (* Store it *)
+        state.doc <- sym
+      | _ ->
+        raise (Location.Error (
+            Location.error ~loc:attr_loc "reqdoc accepts a string, e.g. [@@@reqdoc \"RFC6762\"]"))
+    end
   | ({ txt = "req"; loc = attr_loc}, payload) ->
     begin match payload with
       | (* Should have a single structure item, which is evaluation of a constant string. *)
@@ -35,26 +48,39 @@ let read_attribute state attribute =
                   Pstr_eval ({ pexp_loc  = loc;
                                pexp_desc = Pexp_constant (Const_string (sym, None))}, _)}] ->
         (* Store it *)
-        state.refs <- { reqid=sym; loc=attr_loc } :: state.refs;
-        ()
+        state.refs <- { reqid=sym; loc=attr_loc } :: state.refs
       | _ ->
         raise (Location.Error (
-            Location.error ~loc:attr_loc "[@req] accepts a string, e.g. [@req \"6372.s9_p1_c2\"]"))
+            Location.error ~loc:attr_loc "req accepts a string, e.g. [@req \"RFC6762:s9_p1_c2\"]"))
     end
   | _ -> ()
 
 
+let loc_str {Location.loc_start={Lexing.pos_fname=filename; Lexing.pos_lnum=linenum}} =
+  Printf.sprintf "%s:%d" filename linenum
+
+let error_str {Location.loc=loc; Location.msg=msg} =
+  (loc_str loc) ^ ": " ^ msg
+
 let read_structure str =
-  let state = { refs = [] } in
+  let state = { doc=""; refs=[] } in
   let module MyIteratorArgument = struct
     include TypedtreeIter.DefaultIteratorArgument
+
+    let enter_structure_item item =
+      match item.str_desc with
+      | Tstr_attribute attr -> read_attribute state attr
+      | _ -> ()
 
     let enter_expression expr =
       List.iter (read_attribute state) expr.exp_attributes
   end in
   let module MyIterator = TypedtreeIter.MakeIterator(MyIteratorArgument) in
   MyIterator.iter_structure str;
-  { ReqtraceTypes.refs = state.refs }
+  {
+    ReqtraceTypes.doc = state.doc;
+    ReqtraceTypes.refs = state.refs;
+  }
 
 
 let read_cmt filename =
@@ -89,6 +115,7 @@ let read_cmt filename =
     end
     | _ -> `Error "not an interface"
   with
+  | Location.Error error -> `Error (error_str error)
   | Cmi_format.Error (Not_an_interface _) -> `Error "not an interface"
   | Cmi_format.Error (Wrong_version_interface _) -> `Error "wrong version interface"
   | Cmi_format.Error (Corrupted_interface _) -> `Error "corrupted interface"

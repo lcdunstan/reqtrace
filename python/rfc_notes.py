@@ -276,7 +276,8 @@ def root_as_html(xml, refs, base):
 
 
 class Reference:
-    def __init__(self, id, filename, linenum):
+    def __init__(self, doc, id, filename, linenum):
+        self.doc = doc
         self.id = id
         self.filename = filename
         self.linenum = linenum
@@ -292,13 +293,19 @@ class References:
     def __init__(self):
         self.references = {}
 
-    def load(self, path):
-        doc = etree.parse(path)
-        root = doc.getroot()
+    def load(self, path, filter_docid):
+        xml = etree.parse(path)
+        root = xml.getroot()
+        default_reqdoc = root.find(NS + 'reqdoc')
+        if not default_reqdoc:
+            default_reqdoc = etree.Element(NS + 'reqdoc')
         for reqref in root.findall(NS + 'reqref'):
+            reqdoc = reqref.find(NS + 'reqdoc') or default_reqdoc
+            if reqdoc.text and filter_docid and redoc.text != filter_docid:
+                continue
             reqid = reqref.find(NS + 'reqid').text
             loc = reqref.find(NS + 'loc')
-            ref = Reference(reqid, loc.get('filename'), int(loc.get('linenum')))
+            ref = Reference(reqdoc.text, reqid, loc.get('filename'), int(loc.get('linenum')))
             l = self.references.setdefault(reqid, [])
             l.append(ref)
 
@@ -317,6 +324,7 @@ def main():
     args = parser.parse_args()
 
     doc = etree.parse(args.input[0])
+    docid = 'RFC' + doc.getroot().attrib['number']
 
     refs = References()
     if args.ref:
@@ -325,9 +333,9 @@ def main():
                 for dirpath, dirnames, filenames in os.walk(ref_path):
                     for filename in filenames:
                         if filename.endswith('.req'):
-                            refs.load(os.path.join(dirpath, filename))
+                            refs.load(os.path.join(dirpath, filename), docid)
             else:
-                refs.load(ref_path)
+                refs.load(ref_path, docid)
 
     if args.output_html:
         html = root_as_html(doc.getroot(), refs, args.base)

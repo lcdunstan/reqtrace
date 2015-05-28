@@ -21,6 +21,7 @@ type reqref = {
 }
 
 type impl_unit = {
+  doc : string;
   refs : reqref list;
 }
 

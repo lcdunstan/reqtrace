@@ -48,9 +48,15 @@ let of_reqref ?strip {reqid=reqid; loc=loc} =
   let nodes = [of_reqid reqid; of_loc ?strip loc] in
   make_tag "reqref" (attrs, nodes)
 
-let of_impl_unit ?strip {refs=refs} =
+let of_reqdoc doc =
+  let attrs = [] in
+  let nodes = [`Data doc] in
+  make_tag "reqdoc" (attrs, nodes)
+
+let of_impl_unit ?strip {doc=doc; refs=refs} =
   let attrs = [(Xmlm.ns_xmlns, "xmlns"), ns] in
   let nodes = List.map (of_reqref ?strip) refs in
+  let nodes = if doc = "" then nodes else of_reqdoc doc :: nodes in
   make_tag "impl" (attrs, nodes)
 
 let output_impl_unit ?strip xmlout impl =
