@@ -22,6 +22,9 @@ let ns = "https://github.com/infidel/reqtrace"
 
 let attr name value = ((ns, name), value)
 
+let of_docid docid =
+  make_tag "docid" ([], [`Data docid])
+
 let of_reqid reqid =
   make_tag "reqid" ([], [`Data reqid])
 
@@ -43,9 +46,15 @@ let of_loc ?strip {Location.loc_start={Lexing.pos_fname=filename; Lexing.pos_lnu
   let nodes = [] in
   make_tag "loc" (attrs, nodes)
 
-let of_reqref ?strip {reqid=reqid; loc=loc} =
+let of_reqref ?strip {docid; reqid; loc} =
   let attrs = [] in
   let nodes = [of_reqid reqid; of_loc ?strip loc] in
+  let nodes =
+    if String.length docid = 0 then
+      nodes
+    else
+      of_docid docid :: nodes
+  in
   make_tag "reqref" (attrs, nodes)
 
 let of_reqdoc doc =

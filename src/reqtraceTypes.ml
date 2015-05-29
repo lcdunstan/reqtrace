@@ -16,6 +16,7 @@
  *)
 
 type reqref = {
+  docid : string;
   reqid : string;
   loc : Location.t;
 }

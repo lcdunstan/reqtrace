@@ -25,6 +25,17 @@ type state = {
   mutable refs : reqref list;
 }
 
+let split_reqid str =
+  try
+    let i = String.index str ':' in
+    String.sub str 0 i, String.sub str (i + 1) (String.length str - i - 1)
+  with
+  | Not_found -> "", str
+
+let add_ref state ref =
+  if not (List.mem ref state.refs) then
+    state.refs <- ref :: state.refs
+
 let read_attribute state attribute =
   let open Parsetree in
   let open Asttypes in
@@ -48,7 +59,8 @@ let read_attribute state attribute =
                   Pstr_eval ({ pexp_loc  = loc;
                                pexp_desc = Pexp_constant (Const_string (sym, None))}, _)}] ->
         (* Store it *)
-        state.refs <- { reqid=sym; loc=attr_loc } :: state.refs
+        let docid, reqid = split_reqid sym in
+        add_ref state { docid; reqid; loc=attr_loc }
       | _ ->
         raise (Location.Error (
             Location.error ~loc:attr_loc "req accepts a string, e.g. [@req \"RFC6762:s9_p1_c2\"]"))
