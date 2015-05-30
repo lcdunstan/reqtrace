@@ -46,8 +46,12 @@ let of_loc ?strip {Location.loc_start={Lexing.pos_fname=filename; Lexing.pos_lnu
   let nodes = [] in
   make_tag "loc" (attrs, nodes)
 
-let of_reqref ?strip {docid; reqid; loc} =
-  let attrs = [] in
+let of_reqref ?strip {docid; reqid; loc; reftype} =
+  let attrs = match reftype with
+    | Unknown -> []
+    | Impl -> [attr "type" "impl"]
+    | Test -> [attr "type" "test"]
+  in
   let nodes = [of_reqid reqid; of_loc ?strip loc] in
   let nodes =
     if String.length docid = 0 then
@@ -66,7 +70,7 @@ let of_impl_unit ?strip {doc=doc; refs=refs} =
   let attrs = [(Xmlm.ns_xmlns, "xmlns"), ns] in
   let nodes = List.map (of_reqref ?strip) refs in
   let nodes = if doc = "" then nodes else of_reqdoc doc :: nodes in
-  make_tag "impl" (attrs, nodes)
+  make_tag "unit" (attrs, nodes)
 
 let output_impl_unit ?strip xmlout impl =
   to_output xmlout (None, of_impl_unit ?strip impl)

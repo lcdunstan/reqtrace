@@ -276,16 +276,19 @@ def root_as_html(xml, refs, base):
 
 
 class Reference:
-    def __init__(self, doc, id, filename, linenum):
+    def __init__(self, type, doc, id, filename, linenum):
+        self.type = type
         self.doc = doc
         self.id = id
         self.filename = filename
         self.linenum = linenum
 
     def as_xml(self):
-        type = 'impl'
-        if self.filename.find('test') != -1:
-            type = 'test'
+        type = self.type
+        if not type:
+            type = 'impl'
+            if self.filename.find('test') != -1:
+                type = 'test'
         return etree.Element('coderef', type=type, path=self.filename, line=str(self.linenum))
 
 
@@ -296,16 +299,19 @@ class References:
     def load(self, path, filter_docid):
         xml = etree.parse(path)
         root = xml.getroot()
+        if root.tag != NS + 'unit':
+            raise ParseException('References XML file should have <unit> as root')
         default_reqdoc = root.find(NS + 'reqdoc')
         if not default_reqdoc:
             default_reqdoc = etree.Element(NS + 'reqdoc')
         for reqref in root.findall(NS + 'reqref'):
+            reftype = reqref.get('type')
             reqdoc = reqref.find(NS + 'reqdoc') or default_reqdoc
             if reqdoc.text and filter_docid and redoc.text != filter_docid:
                 continue
             reqid = reqref.find(NS + 'reqid').text
             loc = reqref.find(NS + 'loc')
-            ref = Reference(reqdoc.text, reqid, loc.get('filename'), int(loc.get('linenum')))
+            ref = Reference(reftype, reqdoc.text, reqid, loc.get('filename'), int(loc.get('linenum')))
             l = self.references.setdefault(reqid, [])
             l.append(ref)
 

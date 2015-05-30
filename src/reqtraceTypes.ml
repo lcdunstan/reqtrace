@@ -15,10 +15,13 @@
  *
  *)
 
+type reftype = Impl | Test | Unknown
+
 type reqref = {
   docid : string;
   reqid : string;
   loc : Location.t;
+  reftype : reftype;
 }
 
 type impl_unit = {

@@ -20,10 +20,54 @@ open ReqtraceTypes
 open Parsetree
 open Typedtree
 
+type doc_let = string * string
+
 type state = {
+  mutable reftype : reftype;
   mutable doc : string;
+  mutable doc_lets : doc_let list;
   mutable refs : reqref list;
 }
+
+let read_reftype state payload attr_loc =
+  let open Asttypes in
+  match payload with
+  | (* Must be an identifier. *)
+    PStr [{ pstr_desc = Pstr_eval ({ pexp_desc = Pexp_construct ({ txt=Longident.Lident ident; loc=ident_loc }, None) }, _)}] ->
+    let reftype = match ident with
+      | "Impl" -> Impl
+      | "Test" -> Test
+      | _ -> 
+        raise (Location.Error (
+            Location.error ~loc:attr_loc ("@reftype accepts an identifier (Impl or Test)")
+          ))
+    in
+    state.reftype <- reftype
+  | _ ->
+    raise (Location.Error (
+        Location.error ~loc:attr_loc ("@reftype accepts an identifier (Impl or Test)")
+      ))
+
+let read_reqdoc state payload attr_loc =
+  let open Asttypes in
+  match payload with
+  | (* The simplest format is an evaluation of a constant string. *)
+    PStr [{ pstr_desc =
+              Pstr_eval ({ pexp_desc = Pexp_constant (Const_string (literal, None))}, _)}] ->
+      state.doc <- literal
+
+  | (* Could also be a let binding. *)
+    PStr [{ pstr_desc = Pstr_value (rec_flag, [{
+        pvb_pat = { ppat_desc = Ppat_var { txt=var_txt; loc=var_loc } };
+        pvb_expr = { pexp_desc = Pexp_constant (Const_string (literal, None)) };
+      }])}] ->
+    state.doc_lets <- (var_txt, literal) :: state.doc_lets;
+    if state.doc = "" then
+      state.doc <- literal
+  | _ ->
+    raise (Location.Error (
+        Location.error ~loc:attr_loc ("@reqdoc accepts a string or let-binding")
+      ))
 
 let split_reqid str =
   try
@@ -32,39 +76,55 @@ let split_reqid str =
   with
   | Not_found -> "", str
 
-let add_ref state ref =
+let read_ref reftype state payload attr_loc =
+  let open Asttypes in
+  let docid, reqid = match payload with
+    | (* The simplest format is an evaluation of a constant string. *)
+      PStr [{ pstr_desc = Pstr_eval ({
+          pexp_desc = Pexp_constant (Const_string (literal, None))
+        }, _)}] ->
+      split_reqid literal
+
+    | (* Could also be an evaluation of a "function" application. *)
+      PStr [{ pstr_desc = Pstr_eval ({
+          pexp_desc = Pexp_apply (
+              { pexp_desc=Pexp_ident { txt=Longident.Lident ident; loc=ident_loc } },
+              [(label, { pexp_desc=Pexp_constant (Const_string (literal, None))})]
+            )
+        }, _)}] ->
+      begin
+        try
+          (* [@req ident "reqid"] requires a previous attribute
+             [@reqdoc let ident = "docid"] and is equivalent to
+             [@req "docid:reqid"],
+             but hopefully ident is easier to remember than RFC numbers *)
+          (List.assoc ident state.doc_lets), literal
+        with
+        | Not_found -> raise (Location.Error (
+            Location.error ~loc:ident_loc (ident ^ " was not defined by @reqdoc")
+          ))
+      end
+    | _ ->
+      raise (Location.Error (
+          Location.error ~loc:attr_loc ("@req accepts a string or @reqdoc application")
+        ))
+  in
+  let ref = { docid; reqid; loc=attr_loc; reftype; } in
   if not (List.mem ref state.refs) then
     state.refs <- ref :: state.refs
 
 let read_attribute state attribute =
   let open Parsetree in
   let open Asttypes in
-  match attribute with
-  | ({ txt = "reqdoc"; loc = attr_loc}, payload) ->
-    begin match payload with
-      | (* Should have a single structure item, which is evaluation of a constant string. *)
-        PStr [{ pstr_desc =
-                  Pstr_eval ({ pexp_loc  = loc;
-                               pexp_desc = Pexp_constant (Const_string (sym, None))}, _)}] ->
-        (* Store it *)
-        state.doc <- sym
-      | _ ->
-        raise (Location.Error (
-            Location.error ~loc:attr_loc "reqdoc accepts a string, e.g. [@@@reqdoc \"RFC6762\"]"))
-    end
-  | ({ txt = "req"; loc = attr_loc}, payload) ->
-    begin match payload with
-      | (* Should have a single structure item, which is evaluation of a constant string. *)
-        PStr [{ pstr_desc =
-                  Pstr_eval ({ pexp_loc  = loc;
-                               pexp_desc = Pexp_constant (Const_string (sym, None))}, _)}] ->
-        (* Store it *)
-        let docid, reqid = split_reqid sym in
-        add_ref state { docid; reqid; loc=attr_loc }
-      | _ ->
-        raise (Location.Error (
-            Location.error ~loc:attr_loc "req accepts a string, e.g. [@req \"RFC6762:s9_p1_c2\"]"))
-    end
+  let { txt; loc }, payload = attribute in
+  match txt with
+  | "reftype" -> read_reftype state payload loc
+  | "reqdoc" -> read_reqdoc state payload loc
+  | "req" -> read_ref state.reftype state payload loc
+  (* Not sure if this is useful
+  | "impl" -> read_ref Impl state payload loc
+  | "test" -> read_ref Test state payload loc
+  *)
   | _ -> ()
 
 
@@ -75,7 +135,7 @@ let error_str {Location.loc=loc; Location.msg=msg} =
   (loc_str loc) ^ ": " ^ msg
 
 let read_structure str =
-  let state = { doc=""; refs=[] } in
+  let state = { reftype=Unknown; doc=""; doc_lets=[]; refs=[] } in
   let module MyIteratorArgument = struct
     include TypedtreeIter.DefaultIteratorArgument
 
