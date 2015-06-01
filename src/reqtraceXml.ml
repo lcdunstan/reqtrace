@@ -23,10 +23,9 @@ let ns = "https://github.com/infidel/reqtrace"
 let attr name value = ((ns, name), value)
 
 let of_docid docid =
-  make_tag "docid" ([], [`Data docid])
-
-let of_reqid reqid =
-  make_tag "reqid" ([], [`Data reqid])
+  match docid with
+    | RFC number -> make_tag "rfc" ([], [`Data (string_of_int number)])
+    | Uri uri -> make_tag "uri" ([], [`Data uri])
 
 let strip_prefix str prefix =
   let n = String.length prefix in
@@ -46,30 +45,38 @@ let of_loc ?strip {Location.loc_start={Lexing.pos_fname=filename; Lexing.pos_lnu
   let nodes = [] in
   make_tag "loc" (attrs, nodes)
 
-let of_reqref ?strip {docid; reqid; loc; reftype} =
+let of_docref =
+  function
+  | Bound name ->
+    make_tag "docref" ([attr "name" name], [])
+  | Unbound docid ->
+    make_tag "docref" ([], [of_docid docid])
+
+let of_reqid reqid =
+  make_tag "reqid" ([], [`Data reqid])
+
+let of_reqref ?strip {docref; reqid; loc; reftype} =
   let attrs = match reftype with
     | Unknown -> []
     | Impl -> [attr "type" "impl"]
     | Test -> [attr "type" "test"]
   in
-  let nodes = [of_reqid reqid; of_loc ?strip loc] in
-  let nodes =
-    if String.length docid = 0 then
-      nodes
-    else
-      of_docid docid :: nodes
-  in
+  let nodes = [
+    of_docref docref;
+    of_reqid reqid;
+    of_loc ?strip loc;
+  ] in
   make_tag "reqref" (attrs, nodes)
 
-let of_reqdoc doc =
-  let attrs = [] in
-  let nodes = [`Data doc] in
+let of_docbind (name, docid) =
+  let attrs = [attr "name" name] in
+  let nodes = [of_docid docid] in
   make_tag "reqdoc" (attrs, nodes)
 
-let of_impl_unit ?strip {doc=doc; refs=refs} =
+let of_impl_unit ?strip {docs; refs} =
   let attrs = [(Xmlm.ns_xmlns, "xmlns"), ns] in
   let nodes = List.map (of_reqref ?strip) refs in
-  let nodes = if doc = "" then nodes else of_reqdoc doc :: nodes in
+  let nodes = (List.map of_docbind docs) @ nodes in
   make_tag "unit" (attrs, nodes)
 
 let output_impl_unit ?strip xmlout impl =

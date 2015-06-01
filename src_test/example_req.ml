@@ -1,10 +1,11 @@
 
 [@@@reftype Impl]
-[@@@reqdoc "RFC6762"]
-[@@@reqdoc let edns0 = "RFC2671"]
+[@@@reqdoc let mdns = rfc 6762]
+[@@@reqdoc let edns0 = rfc 2671]
+[@@@reqdoc let other = uri "http://example.net/coolest_standard_ever"]
 
 let hello s =
-  Printf.printf "Hello, World! %s\n" s [@req "s2_p1_c1"]
+  Printf.printf "Hello, World! %s\n" s [@req mdns "s2_p1_c1"]
 
 let something x =
   match x with
@@ -14,5 +15,5 @@ let something x =
   | _ -> "3+"
 
 let _ =
-  hello (something 1) [@req "RFC9999:s18"]
+  hello (something 1) [@req (rfc 9999) "s18"]
 

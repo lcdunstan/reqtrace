@@ -113,7 +113,6 @@ def clause_as_element(clause, refs, base):
     for notes in clause.findall('notes'):
         elem.append(notes_as_element(notes, id, refs, base))
     if id in refs.references:
-        #import pdb; pdb.set_trace()
         elem.insert(0, notes_as_element(etree.Element('notes'), id, refs, base))
 
     label = etree.Element('span')
@@ -292,6 +291,18 @@ class Reference:
         return etree.Element('coderef', type=type, path=self.filename, line=str(self.linenum))
 
 
+def get_docid(elem):
+    rfc = elem.find(NS + 'rfc')
+    uri = elem.find(NS + 'uri')
+    if rfc is not None and uri is None:
+        docid = ('rfc', rfc.text)
+    elif uri is not None and rfc is None:
+        docid = ('uri', uri)
+    else:
+        raise ParseException('<{0}> requires either <rfc> or <uri> but not both'.format(elem.tag))
+    return docid
+
+
 class References:
     def __init__(self):
         self.references = {}
@@ -304,14 +315,28 @@ class References:
         default_reqdoc = root.find(NS + 'reqdoc')
         if not default_reqdoc:
             default_reqdoc = etree.Element(NS + 'reqdoc')
+        docbinds = {}
+        for reqdoc in root.findall(NS + 'reqdoc'):
+            name = reqdoc.get('name')
+            if not name:
+                raise ParseException('<reqdoc> requires name attribute')
+            docid = get_docid(reqdoc)
+            docbinds[name] = docid
+
         for reqref in root.findall(NS + 'reqref'):
             reftype = reqref.get('type')
-            reqdoc = reqref.find(NS + 'reqdoc') or default_reqdoc
-            if reqdoc.text and filter_docid and redoc.text != filter_docid:
+            docref = reqref.find(NS + 'docref')
+            docref_name = docref.get('name')
+            if docref_name:
+                docid = docbinds[docref_name]
+            else:
+                docid = get_docid(docref)
+            if filter_docid and docid != filter_docid:
                 continue
+            #import pdb; pdb.set_trace()
             reqid = reqref.find(NS + 'reqid').text
             loc = reqref.find(NS + 'loc')
-            ref = Reference(reftype, reqdoc.text, reqid, loc.get('filename'), int(loc.get('linenum')))
+            ref = Reference(reftype, docid, reqid, loc.get('filename'), int(loc.get('linenum')))
             l = self.references.setdefault(reqid, [])
             l.append(ref)
 
@@ -330,7 +355,7 @@ def main():
     args = parser.parse_args()
 
     doc = etree.parse(args.input[0])
-    docid = 'RFC' + doc.getroot().attrib['number']
+    docid = ('rfc', doc.getroot().attrib['number'])
 
     refs = References()
     if args.ref:

@@ -17,20 +17,17 @@
  *)
 
 open ReqtraceTypes
+open Asttypes
 open Parsetree
 open Typedtree
 
-type doc_let = string * string
-
 type state = {
   mutable reftype : reftype;
-  mutable doc : string;
-  mutable doc_lets : doc_let list;
+  mutable docs : docbind list;
   mutable refs : reqref list;
 }
 
-let read_reftype state payload attr_loc =
-  let open Asttypes in
+let read_reftype ~loc state payload =
   match payload with
   | (* Must be an identifier. *)
     PStr [{ pstr_desc = Pstr_eval ({ pexp_desc = Pexp_construct ({ txt=Longident.Lident ident; loc=ident_loc }, None) }, _)}] ->
@@ -39,92 +36,108 @@ let read_reftype state payload attr_loc =
       | "Test" -> Test
       | _ -> 
         raise (Location.Error (
-            Location.error ~loc:attr_loc ("@reftype accepts an identifier (Impl or Test)")
+            Location.error ~loc ("@reftype accepts an identifier (Impl or Test)")
           ))
     in
     state.reftype <- reftype
   | _ ->
     raise (Location.Error (
-        Location.error ~loc:attr_loc ("@reftype accepts an identifier (Impl or Test)")
+        Location.error ~loc ("@reftype accepts an identifier (Impl or Test)")
       ))
 
-let read_reqdoc state payload attr_loc =
-  let open Asttypes in
-  match payload with
-  | (* The simplest format is an evaluation of a constant string. *)
-    PStr [{ pstr_desc =
-              Pstr_eval ({ pexp_desc = Pexp_constant (Const_string (literal, None))}, _)}] ->
-      state.doc <- literal
+let read_docid ~loc expr =
+  match expr with
+  | Pexp_apply (
+      { pexp_desc=Pexp_ident { txt=Longident.Lident "rfc"; loc=ident_loc } },
+      [(label, { pexp_desc=Pexp_constant (Const_int number)})]
+    ) ->
+    RFC number
+  | Pexp_apply (
+      { pexp_desc=Pexp_ident { txt=Longident.Lident "uri"; loc=ident_loc } },
+      [(label, { pexp_desc=Pexp_constant (Const_string (literal, None))})]
+    ) ->
+    Uri literal
+  | _ -> 
+    raise (Location.Error (
+        Location.error ~loc ("@reqdoc accepts (rfc <integer>) or (uri <string>)")
+      ))
 
-  | (* Could also be a let binding. *)
+let read_reqdoc ~loc state payload =
+  match payload with
+  | (* We expect a let binding. *)
     PStr [{ pstr_desc = Pstr_value (rec_flag, [{
         pvb_pat = { ppat_desc = Ppat_var { txt=var_txt; loc=var_loc } };
-        pvb_expr = { pexp_desc = Pexp_constant (Const_string (literal, None)) };
+        pvb_expr = { pexp_desc };
       }])}] ->
-    state.doc_lets <- (var_txt, literal) :: state.doc_lets;
-    if state.doc = "" then
-      state.doc <- literal
+    let docid = read_docid ~loc pexp_desc in
+    state.docs <- (var_txt, docid) :: state.docs;
   | _ ->
     raise (Location.Error (
-        Location.error ~loc:attr_loc ("@reqdoc accepts a string or let-binding")
+        Location.error ~loc ("@reqdoc accepts (rfc <integer>) or (uri <string>)")
       ))
 
-let split_reqid str =
-  try
-    let i = String.index str ':' in
-    String.sub str 0 i, String.sub str (i + 1) (String.length str - i - 1)
-  with
-  | Not_found -> "", str
-
-let read_ref reftype state payload attr_loc =
-  let open Asttypes in
-  let docid, reqid = match payload with
-    | (* The simplest format is an evaluation of a constant string. *)
-      PStr [{ pstr_desc = Pstr_eval ({
-          pexp_desc = Pexp_constant (Const_string (literal, None))
-        }, _)}] ->
-      split_reqid literal
-
-    | (* Could also be an evaluation of a "function" application. *)
-      PStr [{ pstr_desc = Pstr_eval ({
-          pexp_desc = Pexp_apply (
-              { pexp_desc=Pexp_ident { txt=Longident.Lident ident; loc=ident_loc } },
-              [(label, { pexp_desc=Pexp_constant (Const_string (literal, None))})]
-            )
-        }, _)}] ->
-      begin
-        try
-          (* [@req ident "reqid"] requires a previous attribute
-             [@reqdoc let ident = "docid"] and is equivalent to
-             [@req "docid:reqid"],
-             but hopefully ident is easier to remember than RFC numbers *)
-          (List.assoc ident state.doc_lets), literal
-        with
-        | Not_found -> raise (Location.Error (
-            Location.error ~loc:ident_loc (ident ^ " was not defined by @reqdoc")
-          ))
-      end
-    | _ ->
+let read_docref ~loc state expr =
+  match expr with
+  | Pexp_ident { txt=Longident.Lident ident; loc=ident_loc } ->
+    (* [@req ident "reqid"] requires a previous attribute
+       [@reqdoc let ident = docid] and is equivalent to
+       [@req docid "reqid"],
+       but hopefully ident is easier to remember than RFC numbers *)
+    if List.mem_assoc ident state.docs then
+      Bound ident
+    else
       raise (Location.Error (
-          Location.error ~loc:attr_loc ("@req accepts a string or @reqdoc application")
+          Location.error ~loc:ident_loc (ident ^ " was not defined by [@reqdoc let name = ...]")
         ))
-  in
-  let ref = { docid; reqid; loc=attr_loc; reftype; } in
-  if not (List.mem ref state.refs) then
-    state.refs <- ref :: state.refs
+  | _ ->
+    try
+      Unbound (read_docid ~loc expr)
+    with
+    | Location.Error _ ->
+      raise (Location.Error (
+          Location.error ~loc ("@req accepts a name bound by @reqdoc, or (rfc <integer>), or (uri <string>)")
+        ))
+
+let rec docref_equal state ref1 ref2 =
+  match ref1, ref2 with
+  | Unbound id1, Unbound id2 -> (id1 = id2)
+  | Bound name, _ ->
+    let id1 = List.assoc name state.docs in
+    docref_equal state (Unbound id1) ref2
+  | Unbound id1, Bound name ->
+    docref_equal state ref2 ref1
+
+let reqref_equal state ref1 ref2 =
+  (docref_equal state ref1.docref ref2.docref) &&
+  (ref1.reqid = ref2.reqid) &&
+  (ref1.loc = ref2.loc) &&
+  (ref1.reftype = ref2.reftype)
+
+let read_reqref ~loc reftype state payload =
+  match payload with
+  | PStr [{ pstr_desc = Pstr_eval ({
+      pexp_desc = Pexp_apply (
+          { pexp_desc=func },
+          [(label, { pexp_desc=Pexp_constant (Const_string (literal, None))})]
+        )
+    }, _)}] ->
+    let docref = read_docref ~loc state func in
+    let ref = { docref; reqid=literal; loc; reftype; } in
+    if not (List.exists (reqref_equal state ref) state.refs) then
+      state.refs <- ref :: state.refs
+
+  | _ ->
+    raise (Location.Error (
+        Location.error ~loc ("@req accepts a string or @reqdoc application")
+      ))
 
 let read_attribute state attribute =
   let open Parsetree in
-  let open Asttypes in
   let { txt; loc }, payload = attribute in
   match txt with
-  | "reftype" -> read_reftype state payload loc
-  | "reqdoc" -> read_reqdoc state payload loc
-  | "req" -> read_ref state.reftype state payload loc
-  (* Not sure if this is useful
-  | "impl" -> read_ref Impl state payload loc
-  | "test" -> read_ref Test state payload loc
-  *)
+  | "reftype" -> read_reftype ~loc state payload
+  | "reqdoc" -> read_reqdoc ~loc state payload
+  | "req" -> read_reqref ~loc state.reftype state payload
   | _ -> ()
 
 
@@ -135,7 +148,7 @@ let error_str {Location.loc=loc; Location.msg=msg} =
   (loc_str loc) ^ ": " ^ msg
 
 let read_structure str =
-  let state = { reftype=Unknown; doc=""; doc_lets=[]; refs=[] } in
+  let state = { reftype=Unknown; docs=[]; refs=[] } in
   let module MyIteratorArgument = struct
     include TypedtreeIter.DefaultIteratorArgument
 
@@ -150,7 +163,7 @@ let read_structure str =
   let module MyIterator = TypedtreeIter.MakeIterator(MyIteratorArgument) in
   MyIterator.iter_structure str;
   {
-    ReqtraceTypes.doc = state.doc;
+    ReqtraceTypes.docs = state.docs;
     ReqtraceTypes.refs = state.refs;
   }
 

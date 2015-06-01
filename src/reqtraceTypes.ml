@@ -1,5 +1,5 @@
 (*
- * Copyright (c) 2014 Leo White <lpw25@cl.cam.ac.uk>
+ * Copyright (c) 2015 Luke Dunstan <LukeDunstan81@gmail.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,17 +15,23 @@
  *
  *)
 
+type docid = RFC of int | Uri of string
+
+type docbind = string * docid
+
+type docref = Bound of string | Unbound of docid
+
 type reftype = Impl | Test | Unknown
 
 type reqref = {
-  docid : string;
+  docref : docref;
   reqid : string;
   loc : Location.t;
   reftype : reftype;
 }
 
 type impl_unit = {
-  doc : string;
+  docs : docbind list;
   refs : reqref list;
 }
 
