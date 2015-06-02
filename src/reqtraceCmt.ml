@@ -147,8 +147,9 @@ let loc_str {Location.loc_start={Lexing.pos_fname=filename; Lexing.pos_lnum=line
 let error_str {Location.loc=loc; Location.msg=msg} =
   (loc_str loc) ^ ": " ^ msg
 
-let read_structure str =
-  let state = { reftype=Unknown; docs=[]; refs=[] } in
+let read_structure ~rfcs str =
+  let docs = List.map (fun (name, num) -> (name, RFC num)) rfcs in
+  let state = { reftype=Unknown; docs; refs=[] } in
   let module MyIteratorArgument = struct
     include TypedtreeIter.DefaultIteratorArgument
 
@@ -168,7 +169,7 @@ let read_structure str =
   }
 
 
-let read_cmt filename =
+let read_cmt ~rfcs filename =
   let open Cmi_format in
   let open Cmt_format in
   try
@@ -177,25 +178,7 @@ let read_cmt filename =
     | Implementation impl -> begin
       match cmt_info.cmt_interface_digest with
       | Some digest ->
-        (*
-        let name = cmt_info.cmt_modname in
-        let root = root_fn name digest in
-        let (id, doc, items) = DocOckCmt.read_implementation root name impl in
-        let imports =
-          List.filter (fun (name', _) -> name <> name') cmt_info.cmt_imports
-        in
-        let imports = List.map (fun (s, d) -> Unresolved(s, d)) imports in
-        let source =
-          match cmt_info.cmt_sourcefile, cmt_info.cmt_source_digest with
-          | Some file, Some digest ->
-            let open Source in
-            let build_dir = cmt_info.cmt_builddir in
-            Some {file; digest; build_dir}
-          | _, _ -> None
-        in
-        Ok {id; doc; digest; imports; source; items}
-        *)
-        `Ok (read_structure impl)
+        `Ok (read_structure ~rfcs impl)
       | None -> `Error "corrupted interface"
     end
     | _ -> `Error "not an interface"
