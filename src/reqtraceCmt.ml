@@ -59,10 +59,10 @@ let read_docid ~loc expr =
     Uri literal
   | _ -> 
     raise (Location.Error (
-        Location.error ~loc ("@reqdoc accepts (rfc <integer>) or (uri <string>)")
+        Location.error ~loc ("@specdoc accepts (rfc <integer>) or (uri <string>)")
       ))
 
-let read_reqdoc ~loc state payload =
+let read_specdoc ~loc state payload =
   match payload with
   | (* We expect a let binding. *)
     PStr [{ pstr_desc = Pstr_value (rec_flag, [{
@@ -73,21 +73,21 @@ let read_reqdoc ~loc state payload =
     state.docs <- (var_txt, docid) :: state.docs;
   | _ ->
     raise (Location.Error (
-        Location.error ~loc ("@reqdoc accepts (rfc <integer>) or (uri <string>)")
+        Location.error ~loc ("@specdoc accepts (rfc <integer>) or (uri <string>)")
       ))
 
 let read_docref ~loc state expr =
   match expr with
   | Pexp_ident { txt=Longident.Lident ident; loc=ident_loc } ->
     (* [@req ident "reqid"] requires a previous attribute
-       [@reqdoc let ident = docid] and is equivalent to
+       [@specdoc let ident = docid] and is equivalent to
        [@req docid "reqid"],
        but hopefully ident is easier to remember than RFC numbers *)
     if List.mem_assoc ident state.docs then
       Bound ident
     else
       raise (Location.Error (
-          Location.error ~loc:ident_loc (ident ^ " was not defined by [@reqdoc let name = ...]")
+          Location.error ~loc:ident_loc (ident ^ " was not defined by [@specdoc let name = ...]")
         ))
   | _ ->
     try
@@ -95,7 +95,7 @@ let read_docref ~loc state expr =
     with
     | Location.Error _ ->
       raise (Location.Error (
-          Location.error ~loc ("@req accepts a name bound by @reqdoc, or (rfc <integer>), or (uri <string>)")
+          Location.error ~loc ("@req accepts a name bound by @specdoc, or (rfc <integer>), or (uri <string>)")
         ))
 
 let rec docref_equal state ref1 ref2 =
@@ -128,7 +128,7 @@ let read_reqref ~loc reftype state payload =
 
   | _ ->
     raise (Location.Error (
-        Location.error ~loc ("@req accepts a string or @reqdoc application")
+        Location.error ~loc ("@req accepts a string or @specdoc application")
       ))
 
 let read_attribute state attribute =
@@ -136,7 +136,7 @@ let read_attribute state attribute =
   let { txt; loc }, payload = attribute in
   match txt with
   | "reftype" -> read_reftype ~loc state payload
-  | "reqdoc" -> read_reqdoc ~loc state payload
+  | "specdoc" | "reqdoc" -> read_specdoc ~loc state payload
   | "req" -> read_reqref ~loc state.reftype state payload
   | _ -> ()
 
