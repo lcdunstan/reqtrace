@@ -18,7 +18,7 @@ The most common case is to add an attribute after an expression:
 
 ```ocaml
 let _ =
-  hello (something 1) [@req (rfc 9999) "s18"]
+  hello (something 1) [@ref (rfc 9999) "s18"]
 ```
 
 The above attribute is intended to express that the adjacent code
@@ -37,7 +37,7 @@ it is possible to express the same reference as follows:
 [@@@specdoc let foo = rfc 9999]
 
 let _ =
-  hello (something 1) [@req foo "s18"]
+  hello (something 1) [@ref foo "s18"]
 ```
 
 The name `foo` can be anything that has meaning to you.
@@ -106,7 +106,7 @@ The recommended usage is:
 
 ```ocaml
 let _ =
-  hello (something 1) [@req foo "s18"]
+  hello (something 1) [@ref foo "s18"]
 ```
 
 One reason for this is that camlp4 does not support
@@ -117,8 +117,8 @@ While it is possible to use expression attributes for
 Since no `@specdoc` attribute defines the name `foo`, it is necessary
 to use the `reqtrace` command line option `--rfc foo=9999` instead.
 
-Unfortunately an attribute such as `[@req (rfc 1234) "s3_p2"]`
-is corrupted by camlp4, causing it to be interpreted as `[@req rfc 1234 "s3_p2"]`,
+Unfortunately an attribute such as `[@ref (rfc 1234) "s3_p2"]`
+is corrupted by camlp4, causing it to be interpreted as `[@ref rfc 1234 "s3_p2"]`,
 so named specifications are required.
 
 # Conversion of RFCs to XML

@@ -95,7 +95,7 @@ let read_docref ~loc state expr =
     with
     | Location.Error _ ->
       raise (Location.Error (
-          Location.error ~loc ("@req accepts a name bound by @specdoc, or (rfc <integer>), or (uri <string>)")
+          Location.error ~loc ("@ref accepts a name bound by @specdoc, or (rfc <integer>), or (uri <string>)")
         ))
 
 let rec docref_equal state ref1 ref2 =
@@ -128,7 +128,7 @@ let read_reqref ~loc reftype state payload =
 
   | _ ->
     raise (Location.Error (
-        Location.error ~loc ("@req accepts a string or @specdoc application")
+        Location.error ~loc ("@ref accepts a string or @specdoc application")
       ))
 
 let read_attribute state attribute =
@@ -137,7 +137,7 @@ let read_attribute state attribute =
   match txt with
   | "reftype" -> read_reftype ~loc state payload
   | "specdoc" | "reqdoc" -> read_specdoc ~loc state payload
-  | "req" -> read_reqref ~loc state.reftype state payload
+  | "req" | "ref" -> read_reqref ~loc state.reftype state payload
   | _ -> ()
 
 
