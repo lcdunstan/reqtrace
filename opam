@@ -10,6 +10,8 @@ tags: [ "syntax" ]
 build: [
   ["ocaml" "setup.ml" "-configure" "--prefix" prefix]
   ["ocaml" "setup.ml" "-build"]
+]
+install: [
   ["ocaml" "setup.ml" "-install"]
 ]
 #remove: [["ocamlfind" "remove" "reqtrace"]]
@@ -17,6 +19,9 @@ build-test: [
   ["ocaml" "setup.ml" "-test"]
 ]
 depends: [
+  "ocamlfind"    {build}
+  "stringext"
+  "cmdliner"
   "ezxmlm"
   "ppx_tools"    {>= "0.99.1"}
   "ounit"        {test}
