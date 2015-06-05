@@ -40,7 +40,7 @@ let _ =
   hello (something 1) [@ref foo "s18"]
 ```
 
-The name `foo` can be anything that has meaning to you.
+The name `foo` can be any OCaml identifier that has meaning to you.
 
 Documents other than IETF RFCs can be referenced using URIs:
 
@@ -110,7 +110,7 @@ let _ =
 ```
 
 One reason for this is that camlp4 does not support
-block attributes (`[@@attr...]) or floating attributes (`[@@@attr...]`).
+block attributes (`[@@attr...]`) or floating attributes (`[@@@attr...]`).
 While it is possible to use expression attributes for
 `@specdoc` and `@reftype`, this is not so convenient.
 
