@@ -54,7 +54,7 @@ def coderef_as_element(coderef, base):
         a.text = a_text
         elem.append(a)
     else:
-        elem.text = coderef_type + ': ' + path
+        elem.text = coderef_type + ': ' + path + ':' + line
     elem.tail = '\n'
     return elem
 
@@ -80,6 +80,11 @@ def notes_as_element(note, target_id, refs, base):
         elem.set('onmouseout', "removeClass(document.getElementById('{0}'), 'hover')".format(target_id))
     elem.set('class', 'notes')
     elem.text = '\n'
+    if target_id in refs.references:
+        for ref in refs.references[target_id]:
+            #elem.append(coderef_as_element(ref.as_xml(), base))
+            note.append(ref.as_xml())
+        del refs.references[target_id]
     for child in note:
         if child.tag == 'note':
             elem.append(note_as_element(child))
@@ -87,10 +92,6 @@ def notes_as_element(note, target_id, refs, base):
             elem.append(coderef_as_element(child, base))
         elif child.tag == 'ref':
             elem.append(ref_as_element(child))
-    if target_id in refs.references:
-        for ref in refs.references[target_id]:
-            elem.append(coderef_as_element(ref.as_xml(), base))
-        del refs.references[target_id]
     elem.tail = '\n\n'
     return elem
 
@@ -108,12 +109,16 @@ def clause_as_element(clause, refs, base):
         css_class += ' ' + importance
     elem.set('class', css_class)
 
+    if id in refs.references:
+        #elem.insert(0, notes_as_element(etree.Element('notes'), id, refs, base))
+        notes = clause.find('notes')
+        if notes is None:
+            notes = etree.Element('notes')
+            clause.append(notes)
     # For editing the XML it is nicer to have <notes> after
     # the text, but for the HTML it looks better before the text.
     for notes in clause.findall('notes'):
         elem.append(notes_as_element(notes, id, refs, base))
-    if id in refs.references:
-        elem.insert(0, notes_as_element(etree.Element('notes'), id, refs, base))
 
     label = etree.Element('span')
     label.set('class', 'label')
@@ -136,6 +141,12 @@ def paragraph_as_element(paragraph, section, refs, base):
         pre.text = '\n'.join(line.text for line in paragraph.findall('line'))
         elem.append(pre)
     else:
+        if id in refs.references:
+            #elem.insert(0, notes_as_element(etree.Element('notes'), id, refs, base))
+            notes = paragraph.find('notes')
+            if notes is None:
+                notes = etree.Element('notes')
+                paragraph.append(notes)
         for child in paragraph:
             if child.tag == 'clause':
                 clause = clause_as_element(child, refs, base)
@@ -144,11 +155,7 @@ def paragraph_as_element(paragraph, section, refs, base):
                 elem.append(line_as_element(child))
             elif child.tag == 'notes':
                 div = notes_as_element(child, id, refs, base)
-                if first_notes is None:
-                    first_notes = child
                 elem.insert(0, div)
-        if id in refs.references:
-            elem.insert(0, notes_as_element(etree.Element('notes'), id, refs, base))
     elem.tail = '\n\n'
     return elem
 
@@ -312,15 +319,15 @@ class References:
         root = xml.getroot()
         if root.tag != NS + 'unit':
             raise ParseException('References XML file should have <unit> as root')
-        default_reqdoc = root.find(NS + 'reqdoc')
-        if not default_reqdoc:
-            default_reqdoc = etree.Element(NS + 'reqdoc')
+        default_specdoc = root.find(NS + 'specdoc')
+        if default_specdoc is None:
+            default_specdoc = etree.Element(NS + 'specdoc')
         docbinds = {}
-        for reqdoc in root.findall(NS + 'reqdoc'):
-            name = reqdoc.get('name')
+        for specdoc in root.findall(NS + 'specdoc'):
+            name = specdoc.get('name')
             if not name:
-                raise ParseException('<reqdoc> requires name attribute')
-            docid = get_docid(reqdoc)
+                raise ParseException('<specdoc> requires name attribute')
+            docid = get_docid(specdoc)
             docbinds[name] = docid
 
         for reqref in root.findall(NS + 'reqref'):
@@ -333,7 +340,6 @@ class References:
                 docid = get_docid(docref)
             if filter_docid and docid != filter_docid:
                 continue
-            #import pdb; pdb.set_trace()
             reqid = reqref.find(NS + 'reqid').text
             loc = reqref.find(NS + 'loc')
             ref = Reference(reftype, docid, reqid, loc.get('filename'), int(loc.get('linenum')))

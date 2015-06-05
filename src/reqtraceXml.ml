@@ -71,7 +71,7 @@ let of_reqref ?strip {docref; reqid; loc; reftype} =
 let of_docbind (name, docid) =
   let attrs = [attr "name" name] in
   let nodes = [of_docid docid] in
-  make_tag "reqdoc" (attrs, nodes)
+  make_tag "specdoc" (attrs, nodes)
 
 let of_impl_unit ?strip {docs; refs} =
   let attrs = [(Xmlm.ns_xmlns, "xmlns"), ns] in
