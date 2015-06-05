@@ -175,13 +175,9 @@ let read_cmt ~rfcs filename =
   try
     let cmt_info = read_cmt filename in
     match cmt_info.cmt_annots with
-    | Implementation impl -> begin
-      match cmt_info.cmt_interface_digest with
-      | Some digest ->
-        `Ok (read_structure ~rfcs impl)
-      | None -> `Error "corrupted interface"
-    end
-    | _ -> `Error "not an interface"
+    | Implementation impl -> `Ok (read_structure ~rfcs impl)
+    | Packed (sigs, ss) -> `Not_an_impl
+    | _ -> `Error "not an implementation"
   with
   | Location.Error error -> `Error (error_str error)
   | Cmi_format.Error (Not_an_interface _) -> `Error "not an interface"
