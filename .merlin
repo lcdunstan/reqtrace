@@ -2,6 +2,7 @@ PKG compiler-libs
 PKG ezxmlm xmlm
 PKG cmdliner
 PKG oUnit
+PKG stringext
 
 S src
 B _build/src
