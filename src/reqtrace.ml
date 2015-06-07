@@ -108,7 +108,7 @@ let rfc =
   Arg.(
     value &
     opt_all (pair ~sep:'=' string int) [] &
-    info ~docv:"name:number" ~doc:"defines a friendly name for the RFC with the specified number" ["r"; "rfc"]
+    info ~docv:"name=number" ~doc:"defines a friendly name for the RFC with the specified number" ["r"; "rfc"]
   )
 
 let extract_cmd =
