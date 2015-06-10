@@ -145,7 +145,7 @@ let extract_cmd =
     (Arg.pos 0)
   in
   Term.(ret (pure (ReqtraceUtil.map_ret (fun _ -> ())) $
-             (pure ReqtraceExtract.run
+             (pure ReqtraceExtractCmd.run
               $ strip $ rfc
               $ output $ path')),
         info "extract" ~doc ~sdocs:global_option_section ~man)
@@ -160,7 +160,7 @@ let html_cmd =
   let path_doc = "the file or directory to render to HTML" in
   let path' = path ~doc:path_doc (Arg.pos 0) in
   let css = uri_ref ~doc:css_doc ["css"] in
-  Term.(ret (pure ReqtraceCliHtml.run
+  Term.(ret (pure ReqtraceHtmlCmd.run
                $ output $ path'
                $ scheme $ css $ share_dir),
         info "html" ~doc ~sdocs:global_option_section ~man)

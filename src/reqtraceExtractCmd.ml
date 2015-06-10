@@ -119,7 +119,7 @@ let extract ?strip ~rfcs cmt out_dir rel_xml =
     | `Ok unit ->
       let oc = open_out xml in
       let xout = Xmlm.make_output (`Channel oc) in
-      ReqtraceXml.output_impl_unit ?strip xout unit;
+      ReqtraceRefXml.output_impl_unit ?strip xout unit;
       close_out oc;
       `Ok unit
 

@@ -16,7 +16,7 @@
  *
  *)
 
-module Error = ReqtraceExtract.Error
+module Error = ReqtraceExtractCmd.Error
 module Dir = ReqtraceUtil.Dir
 
 let (/) = Filename.concat
@@ -228,7 +228,7 @@ let render_file in_file out_file scheme css share =
   let css_dir = Filename.dirname out_file in
   let root = Filename.dirname in_file in
   let path = Filename.basename in_file in
-  let rfc = ReqtraceDoc.read root path in
+  let rfc = ReqtraceDocXml.read root path in
   let render_f = render_rfc rfc out_file scheme in
   render_with_css share css_dir render_f css
 
