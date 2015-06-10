@@ -69,3 +69,56 @@ let rel_of_path depth path =
   then path
   else (ascent_of_depth "" depth) ^ path
 
+let is_link path =
+  let open Unix in
+  try
+    (lstat path).st_kind = S_LNK
+  with
+  | Unix.Unix_error _ -> false
+
+let copy in_file out_file =
+  if is_link out_file then
+    `Error (false, out_file ^ " is a symbolic link")
+  else
+    let page_size = 4096 in
+    let ic = open_in_bin  in_file in
+    let oc = open_out_bin out_file in
+    let buf = Bytes.create page_size in
+    let rec copy_more () =
+      match input ic buf 0 page_size with
+      | 0 -> ()
+      | len -> output oc buf 0 len; copy_more ()
+    in
+    copy_more ();
+    close_in ic;
+    close_out oc;
+    `Ok out_file
+
+module Dir = struct
+  module Error = struct
+    let nondirectory_segment path =
+      `Error (false, "path "^path^" is not a directory")
+  end
+
+  let rec make_exist ~perm path =
+    try Unix.access path []; None
+    with
+    | Unix.Unix_error (Unix.ENOENT, _, _) ->
+      let dir = Filename.dirname path in
+      begin match make_exist ~perm dir with
+      | None ->
+        Unix.(mkdir path perm);
+        None
+      | Some err -> Some err
+      end
+    | Unix.Unix_error (Unix.ENOTDIR, _, _) ->
+      Some (Error.nondirectory_segment path)
+
+  let make_dirs_exist ~perm =
+    List.fold_left (fun err_opt path ->
+      match err_opt with None -> make_exist ~perm path | Some err -> Some err
+    ) None
+
+  let name path = match Filename.dirname path with "." -> "" | p -> p
+end
+

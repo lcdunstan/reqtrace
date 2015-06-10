@@ -15,6 +15,15 @@
  *
  *)
 
+type elemid = string
+
+type linesub = { start_offset: int; end_offset: int; text: string }
+type clause = { id: elemid option; lines: linesub list }
+type paragraph = { id: elemid option; lines: linesub list; clauses: clause list }
+type section = { name: string; id: elemid option; paras: paragraph list; }
+type rfc = { number: int; title: string; sections: section list; }
+
+
 type docid = RFC of int | Uri of string
 
 type docbind = string * docid

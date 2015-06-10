@@ -18,7 +18,7 @@
 
 open Cmdliner
 
-let version = "0.0.1"
+let version = "0.0.2"
 
 let global_option_section = "COMMON OPTIONS"
 
@@ -111,6 +111,29 @@ let rfc =
     info ~docv:"name=number" ~doc:"defines a friendly name for the RFC with the specified number" ["r"; "rfc"]
   )
 
+let scheme = Arg.(value (
+  let docv = "SCHEME" in
+  let doc  = "the scheme used to browse the documentation" in
+  let schemes = enum [
+    "file", "file"; "http", "http";
+  ] in
+  opt schemes "http" & info ["scheme"] ~docv ~doc
+))
+
+let share_dir = Arg.(value (
+  let docv = "SHARE_DIR" in
+  let doc  = "the shared resource directory" in
+  opt dir "share" & info ~docv ~doc ["share"]
+))
+
+let uri_ref ~doc names = Term.(app (pure (function
+  | Some s -> Some (Uri.of_string s)
+  | None -> None
+)) Arg.(value (
+  let docv = "URI_REFERENCE" in
+  opt (some string) None & info names ~docv ~doc
+)))
+
 let extract_cmd =
   let doc = "extract references to requirements from cmt files into XML" in
   let man = [
@@ -126,6 +149,21 @@ let extract_cmd =
               $ strip $ rfc
               $ output $ path')),
         info "extract" ~doc ~sdocs:global_option_section ~man)
+
+let html_cmd =
+  let doc = "render XML documentation into HTML" in
+  let css_doc = "the URI reference of the CSS files to use" in
+  let man = [
+
+  ] @ help_sections
+  in
+  let path_doc = "the file or directory to render to HTML" in
+  let path' = path ~doc:path_doc (Arg.pos 0) in
+  let css = uri_ref ~doc:css_doc ["css"] in
+  Term.(ret (pure ReqtraceCliHtml.run
+               $ output $ path'
+               $ scheme $ css $ share_dir),
+        info "html" ~doc ~sdocs:global_option_section ~man)
 
 let default_cmd =
   let exec_name = Filename.basename Sys.argv.(0) in
@@ -143,6 +181,7 @@ let default_cmd =
 let () =
   match Term.eval_choice default_cmd [
       extract_cmd;
+      html_cmd;
     ] with
   | `Ok () | `Version | `Help -> exit 0
   | `Error _ -> exit 1
