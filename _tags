@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: d322f28e135a40e5cbc20fdc27e92344)
+# DO NOT EDIT (digest: da3ab2fd9a0af5894d3f29dc11bebc25)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -25,12 +25,14 @@ true: annot, bin_annot
 <src/reqtrace.{native,byte}>: package(ezxmlm)
 <src/reqtrace.{native,byte}>: package(stringext)
 <src/reqtrace.{native,byte}>: package(unix)
+<src/reqtrace.{native,byte}>: package(uri)
 <src/*.ml{,i,y}>: package(cmdliner)
 <src/*.ml{,i,y}>: package(compiler-libs)
 <src/*.ml{,i,y}>: package(compiler-libs.common)
 <src/*.ml{,i,y}>: package(ezxmlm)
 <src/*.ml{,i,y}>: package(stringext)
 <src/*.ml{,i,y}>: package(unix)
+<src/*.ml{,i,y}>: package(uri)
 # OASIS_STOP
 "python/venv": -traverse
 "python/venv": not_hygienic
