@@ -15,7 +15,7 @@
  *
  *)
 
-open ReqtraceTypes
+open ReqtraceTypes.RFC
 
 let xmlns = ""
 

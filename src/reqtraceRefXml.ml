@@ -16,7 +16,7 @@
  *)
 
 open Ezxmlm
-open ReqtraceTypes
+open ReqtraceTypes.Refs
 
 let ns = "https://github.com/infidel/reqtrace"
 

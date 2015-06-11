@@ -220,7 +220,7 @@ let render_rfc rfc out_file scheme css =
   let normal_uri = normal_uri ~scheme in
   let uri_of_path = uri_of_path ~scheme in
   let body = Ezxmlm.make_tag "body" ([], []) (*ReqtraceHtml.of_package ~name ~rfc ~normal_uri ~uri_of_path*) in
-  let title = rfc.ReqtraceTypes.title in
+  let title = rfc.ReqtraceTypes.RFC.title in
   write_html ~css ~title out_file body;
   `Ok ()
 

@@ -16,7 +16,7 @@
  *
  *)
 
-open ReqtraceTypes
+open ReqtraceTypes.Refs
 open Asttypes
 open Parsetree
 open Typedtree
@@ -164,8 +164,8 @@ let read_structure ~rfcs str =
   let module MyIterator = TypedtreeIter.MakeIterator(MyIteratorArgument) in
   MyIterator.iter_structure str;
   {
-    ReqtraceTypes.docs = state.docs;
-    ReqtraceTypes.refs = state.refs;
+    docs = state.docs;
+    refs = state.refs;
   }
 
 

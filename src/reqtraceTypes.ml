@@ -17,30 +17,55 @@
 
 type elemid = string
 
-type linesub = { start_offset: int; end_offset: int; text: string }
-type clause = { id: elemid option; lines: linesub list }
-type paragraph = { id: elemid option; lines: linesub list; clauses: clause list }
-type section = { name: string; id: elemid option; paras: paragraph list; }
-type rfc = { number: int; title: string; sections: section list; }
+module RFC = struct
+  type linesub = {
+    start_offset: int;
+    end_offset: int;
+    text: string;
+  }
 
+  type clause = {
+    id: elemid option;
+    lines: linesub list;
+  }
 
-type docid = RFC of int | Uri of string
+  type paragraph = {
+    id: elemid option;
+    lines: linesub list;
+    clauses: clause list;
+  }
 
-type docbind = string * docid
+  type section = {
+    name: string;
+    id: elemid option;
+    paras: paragraph list;
+  }
 
-type docref = Bound of string | Unbound of docid
+  type rfc = {
+    number: int;
+    title: string;
+    sections: section list;
+  }
+end
 
-type reftype = Impl | Test | Unknown
+module Refs = struct
+  type docid = RFC of int | Uri of string
 
-type reqref = {
-  docref : docref;
-  reqid : string;
-  loc : Location.t;
-  reftype : reftype;
-}
+  type docbind = string * docid
 
-type impl_unit = {
-  docs : docbind list;
-  refs : reqref list;
-}
+  type docref = Bound of string | Unbound of docid
 
+  type reftype = Impl | Test | Unknown
+
+  type reqref = {
+    docref : docref;
+    reqid : string;
+    loc : Location.t;
+    reftype : reftype;
+  }
+
+  type impl_unit = {
+    docs : docbind list;
+    refs : reqref list;
+  }
+end
