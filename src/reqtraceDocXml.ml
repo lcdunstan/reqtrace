@@ -56,12 +56,36 @@ let rec of_xml root path xml =
   (* Returns a string *)
   let rec read_text text =
     match Xmlm.input xml with
-    | `El_start _ -> fail_xml "expected text in <line> or <linesub>"
+    | `El_start _ -> fail_xml "expected text only"
     | `Data data -> read_text (text ^ data)
     | `Dtd _ -> read_text text
     | `El_end -> text
   in
-  (* Returns a clause record, with line substrings in reverse order *)
+  (* Returns a list of notes, in reverse order *)
+  let rec read_notes notes =
+    match Xmlm.input xml with
+    | `El_start ((ns,"note"),attrs) when ns = xmlns ->
+      let todo = match optional_attr attrs "type" with
+        | None -> false
+        | Some value when value = "todo" -> true
+        | Some _ -> false
+      in
+      let text = read_text "" in
+      let note = { text; todo; } in
+      read_notes (Note note :: notes)
+    | `El_start ((ns,"ref"),attrs) when ns = xmlns ->
+      let text = read_text "" in
+      let target = match optional_attr attrs "target" with
+        | None -> text
+        | Some value -> value
+      in
+      read_notes (Ref target :: notes)
+    (* TODO: coderef *)
+    | `El_start _ -> fail_xml "expected <note> or <ref> in <notes>"
+    | `Data _ | `Dtd _ -> read_notes notes
+    | `El_end -> notes
+  in
+  (* Returns a clause record, with line substrings and notes in reverse order *)
   let rec read_clause (clause:clause) =
     match Xmlm.input xml with
     | `El_start ((ns,"linesub"),attrs) when ns = xmlns ->
@@ -70,7 +94,9 @@ let rec of_xml root path xml =
       let text = read_text "" in
       let line = { start_offset = int_of_string start_offset; end_offset = int_of_string end_offset; text; } in
       read_clause { clause with lines = line :: clause.lines }
-    | `El_start _ -> fail_xml "expected <linesub> in <clause>"
+    | `El_start ((ns,"notes"),attrs) when ns = xmlns ->
+      read_clause { clause with notes = read_notes clause.notes }
+    | `El_start _ -> fail_xml "expected <linesub> and <notes> in <clause>"
     | `Data _ | `Dtd _ -> read_clause clause
     | `El_end -> clause
   in
@@ -85,7 +111,8 @@ let rec of_xml root path xml =
       read_paragraph { paragraph with lines = line :: paragraph.lines }
     | `El_start ((ns,"clause"),attrs) when ns = xmlns ->
       let id = optional_attr attrs "id" in
-      let clause = read_clause { id; lines=[] } in
+      let clause_rev = read_clause { id; lines=[]; notes=[] } in
+      let clause = { clause_rev with lines = List.rev clause_rev.lines; notes = List.rev clause_rev.notes; } in
       read_paragraph { paragraph with clauses = clause :: paragraph.clauses }
     | `El_start _ -> fail_xml "expected <line> or <clause> in <paragraph>"
     | `Data _ | `Dtd _ -> read_paragraph paragraph
@@ -103,11 +130,16 @@ let rec of_xml root path xml =
     | `Data _ | `Dtd _ -> read_section section
     | `El_end -> section
   in
+  let rec read_value value =
+    match Xmlm.input xml with
+    | `El_start _ -> fail_xml "expected text in <value>"
+    | `Data _ | `Dtd _ -> (*TODO*) read_value value
+    | `El_end -> value
+  in
   let rec read_header rfc =
     match Xmlm.input xml with
     | `El_start ((ns,"value"),_) when ns = xmlns ->
-      (* TODO *)
-      read_header rfc
+      read_header (read_value rfc)
     | `El_start _ -> fail_xml "expected <value> in <header>"
     | `Data _ | `Dtd _ -> read_header rfc
     | `El_end -> rfc
@@ -128,7 +160,8 @@ let rec of_xml root path xml =
   (* Returns an rfc record *)
   let rec read_rfc rfc =
     match Xmlm.input xml with
-    | `El_start ((ns,"header"),_) when ns = xmlns -> read_header rfc
+    | `El_start ((ns,"header"),_) when ns = xmlns ->
+      read_rfc (read_header rfc)
     | `El_start ((ns,"sections"),_) when ns = xmlns ->
       { rfc with sections = List.rev (read_sections []) }
     | `El_start _ -> fail_xml "expected <header> and <sections> in element in <rfc>" 

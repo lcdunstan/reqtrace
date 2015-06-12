@@ -24,9 +24,20 @@ module RFC = struct
     text: string;
   }
 
+  type note = {
+    text: string;
+    todo: bool;
+  }
+
+  type notes_child =
+    | Note of note
+    | Ref of string
+    | CodeRef of string
+
   type clause = {
     id: elemid option;
     lines: linesub list;
+    notes: notes_child list;
   }
 
   type paragraph = {

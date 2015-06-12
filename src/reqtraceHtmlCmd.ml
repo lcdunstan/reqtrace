@@ -53,20 +53,8 @@ let pathloc ?pkg_root scheme unit = CodocDocHtml.pathloc
   ~normal_uri:(normal_uri ~scheme)
 *)
 
-let write_html ~css ~title html_file body =
+let write_html html_file html =
   let open Ezxmlm in
-  let head =
-    make_tag "head" ([], [
-        make_tag "meta" ([(("", "charset"), "utf=8")], []);
-        make_tag "link" ([
-            (("", "rel"), "stylesheet");
-            (("", "type"), "text/css");
-            (("", "href"), css);
-          ], []);
-        make_tag "title" ([], [`Data title]);
-      ])
-  in
-  let html = make_tag "html" ([], [head; body]) in
   let out_file = open_out html_file in
   let xout = Xmlm.make_output (`Channel out_file) in
   to_output xout (None, html);
@@ -205,8 +193,10 @@ let maybe_copy path target_dir =
     ReqtraceUtil.map_ret (fun _ -> file_name) (ReqtraceUtil.copy path target)
 
 let css_name = "rfc_notes.css"
+let js_name = "rfc_notes.js"
 
 let shared_css share = share / css_name
+let shared_js share = share / js_name
 
 let render_with_css share css_dir render_f = function
   | Some css -> render_f (Uri.to_string css)
@@ -216,32 +206,40 @@ let render_with_css share css_dir render_f = function
     | `Ok css -> render_f css
     | `Error _ as err -> err
 
-let render_rfc rfc out_file scheme css =
+let render_with_js share js_dir render_f = function
+  | Some js -> render_f (Uri.to_string js)
+  | None ->
+    let js = shared_js share in
+    match maybe_copy js js_dir with
+    | `Ok js -> render_f js
+    | `Error _ as err -> err
+
+let render_rfc rfc out_file scheme css js =
   let normal_uri = normal_uri ~scheme in
   let uri_of_path = uri_of_path ~scheme in
-  let body = Ezxmlm.make_tag "body" ([], []) (*ReqtraceHtml.of_package ~name ~rfc ~normal_uri ~uri_of_path*) in
-  let title = rfc.ReqtraceTypes.RFC.title in
-  write_html ~css ~title out_file body;
+  let html = ReqtraceDocHtml.of_rfc ~normal_uri ~uri_of_path ~css ~js rfc in
+  write_html out_file html;
   `Ok ()
 
-let render_file in_file out_file scheme css share =
-  let css_dir = Filename.dirname out_file in
+let render_file in_file out_file scheme css js share =
+  let css_js_dir = Filename.dirname out_file in
   let root = Filename.dirname in_file in
   let path = Filename.basename in_file in
   let rfc = ReqtraceDocXml.read root path in
-  let render_f = render_rfc rfc out_file scheme in
-  render_with_css share css_dir render_f css
+  render_with_js share css_js_dir (fun js ->
+      render_with_css share css_js_dir (fun css ->
+          render_rfc rfc out_file scheme css js) css) js
 
-let run output path scheme css share =
+let run output path scheme css js share =
   match path, output with
   | `Missing path, _ -> Error.source_missing path
   | `File in_file, None ->
-    render_file in_file (html_name_of in_file) scheme css share
+    render_file in_file (html_name_of in_file) scheme css js share
   | `File in_file, Some (`Missing out_file | `File out_file) ->
-    render_file in_file out_file scheme css share
+    render_file in_file out_file scheme css js share
   | `File in_file, Some (`Dir out_dir) ->
     let html_name = html_name_of (Filename.basename in_file) in
-    render_file in_file (out_dir / html_name) scheme css share
+    render_file in_file (out_dir / html_name) scheme css js share
   | `Dir in_dir, None ->
     `Error (false, "unimplemented")
   | `Dir in_dir, Some (`Missing out_dir | `Dir out_dir) ->
