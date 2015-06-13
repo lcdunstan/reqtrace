@@ -152,20 +152,22 @@ let extract_cmd =
 
 let html_cmd =
   let doc = "render XML documentation into HTML" in
-  let css_doc = "the URI reference of the CSS file to use" in
-  let js_doc = "the URI reference of the JS file to use" in
   let man = [
 
   ] @ help_sections
   in
   let path_doc = "the file or directory to render to HTML" in
   let path' = path ~doc:path_doc (Arg.pos 0) in
+  let css_doc = "the URI reference of the CSS file to use" in
   let css = uri_ref ~doc:css_doc ["css"] in
+  let js_doc = "the URI reference of the JS file to use" in
   let js = uri_ref ~doc:js_doc ["js"] in
+  let base_doc = "the base URI for hyperlinks to the source code" in
+  let base = uri_ref ~doc:base_doc ["base"] in
   let ref = path_opt ~doc:"the file or directory containing requirement references extracted from code (*.req)" ["ref"] in
   Term.(ret (pure ReqtraceHtmlCmd.run
                $ output $ path'
-               $ scheme $ css $ js $ share_dir $ ref),
+               $ css $ js $ base $ share_dir $ ref),
         info "html" ~doc ~sdocs:global_option_section ~man)
 
 let default_cmd =

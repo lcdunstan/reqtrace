@@ -28,6 +28,7 @@ let html_name_of path =
    with Not_found -> path
   )^ ".html"
 
+(*
 let uri_of_path ~scheme path =
   Uri.of_string begin
     if scheme <> "file" && Filename.check_suffix path "/index.html"
@@ -40,7 +41,6 @@ let normal_uri ~scheme uri =
   then uri
   else Uri.(resolve "" uri (of_string "index.html"))
 
-(*
 let pathloc ?pkg_root scheme unit = CodocDocHtml.pathloc
   ~unit
   ~index:CodocDoc.(fun root -> match root with
@@ -214,19 +214,17 @@ let render_with_js share js_dir render_f = function
     | `Ok js -> render_f js
     | `Error _ as err -> err
 
-let render_rfc rfc out_file scheme css js refs =
-  let normal_uri = normal_uri ~scheme in
-  let uri_of_path = uri_of_path ~scheme in
-  let html = ReqtraceDocHtml.of_rfc ~normal_uri ~uri_of_path ~css ~js ~refs rfc in
+let render_rfc rfc out_file css js src_base refs =
+  let html = ReqtraceDocHtml.of_rfc ~css ~js ~refs ~src_base rfc in
   write_html out_file html;
   `Ok ()
 
-let render_file in_file out_file scheme css js share refs =
+let render_file in_file out_file css js src_base share refs =
   let css_js_dir = Filename.dirname out_file in
   let rfc = ReqtraceDocXml.read in_file in
   render_with_js share css_js_dir (fun js ->
       render_with_css share css_js_dir (fun css ->
-          render_rfc rfc out_file scheme css js refs) css) js
+          render_rfc rfc out_file css js src_base refs) css) js
 
 let only_req file path =
   Filename.check_suffix file ".req"
@@ -259,16 +257,16 @@ let load_refs = function
   | Some (`Dir path) ->
     load_refs_dir path
 
-let run_with_refs output path scheme css js share refs =
+let run_with_refs output path css js src_base share refs =
   match path, output with
   | `Missing path, _ -> Error.source_missing path
   | `File in_file, None ->
-    render_file in_file (html_name_of in_file) scheme css js share refs
+    render_file in_file (html_name_of in_file) css js src_base share refs
   | `File in_file, Some (`Missing out_file | `File out_file) ->
-    render_file in_file out_file scheme css js share refs
+    render_file in_file out_file css js src_base share refs
   | `File in_file, Some (`Dir out_dir) ->
     let html_name = html_name_of (Filename.basename in_file) in
-    render_file in_file (out_dir / html_name) scheme css js share refs
+    render_file in_file (out_dir / html_name) css js src_base share refs
   | `Dir in_dir, None ->
     `Error (false, "unimplemented")
   | `Dir in_dir, Some (`Missing out_dir | `Dir out_dir) ->
@@ -312,7 +310,8 @@ let run_with_refs output path scheme css js share refs =
     end
   *)
 
-let run output path scheme css js share ref_path =
+let run output path css js base share ref_path =
+  let src_base = match base with None -> "" | Some uri -> Uri.to_string uri in
   match load_refs ref_path with
-  | `Ok refs -> run_with_refs output path scheme css js share refs
+  | `Ok refs -> run_with_refs output path css js src_base share refs
   | `Error _ as err -> err
