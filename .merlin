@@ -3,6 +3,7 @@ PKG ezxmlm xmlm
 PKG cmdliner
 PKG oUnit
 PKG stringext
+PKG uri
 
 S src
 B _build/src
