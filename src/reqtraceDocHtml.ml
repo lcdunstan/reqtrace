@@ -47,14 +47,18 @@ let body_of_doc doc ref_hash src_base =
         | None -> "impl"
         | Some i -> "test"
     in
+    let text = Printf.sprintf "%s:%d" path linenum in
     make_tag "div" (
       [attr "class" ("coderef " ^ reftype_str);],
       [
         `Data (reftype_str ^ ": ");
-        make_tag "a" (
-          [attr "href" (src_base ^ path)],
-          [`Data (Printf.sprintf "%s:%d" path linenum)]
-        );
+        if src_base = "" then
+          `Data text
+        else
+          make_tag "a" (
+            [attr "href" (Printf.sprintf "%s%s#L%d" src_base path linenum)],
+            [`Data text]
+          );
       ])
   in
 
