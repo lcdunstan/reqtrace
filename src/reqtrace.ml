@@ -162,9 +162,10 @@ let html_cmd =
   let path' = path ~doc:path_doc (Arg.pos 0) in
   let css = uri_ref ~doc:css_doc ["css"] in
   let js = uri_ref ~doc:js_doc ["js"] in
+  let ref = path_opt ~doc:"the file or directory containing requirement references extracted from code (*.req)" ["ref"] in
   Term.(ret (pure ReqtraceHtmlCmd.run
                $ output $ path'
-               $ scheme $ css $ js $ share_dir),
+               $ scheme $ css $ js $ share_dir $ ref),
         info "html" ~doc ~sdocs:global_option_section ~man)
 
 let default_cmd =

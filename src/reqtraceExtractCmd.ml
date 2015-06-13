@@ -16,74 +16,8 @@
  *
  *)
 
-module Error = struct
-  let source_missing path =
-    `Error (false, "source "^path^" does not exist")
-
-  let dir_to_file dir file =
-    `Error (false, "can't process directory "^dir^" into file "^file)
-
-  (*
-  let unknown_file_type path =
-    `Error (false, "don't know how to handle file "^path)
-    `Error (false, "source "^in_file^" is not a cmt")
-
-  let not_an_interface path =
-    `Error (false, path^" is not an interface")
-
-  let wrong_version_interface path =
-    `Error (false, path^" has the wrong format version")
-
-  let not_an_implementation path =
-    `Error (false, path^" is not an implementation")
-
-  let wrong_version_implementation path =
-    `Error (false, path^" has the wrong format version")
-
-  let corrupted_interface path =
-    `Error (false, path^" is corrupted")
-
-  let not_a_typedtree path =
-    `Error (false, path^" is not a typed tree")
-  *)
-
-  let read_cmt_failed path msg =
-    `Error (false, path ^ ": failed to load cmt: " ^ msg)
-end
-
-let combine_errors errs = `Error
-  begin List.fold_left (fun (show_help,str) -> function
-  | `Error (err_help,err_str) -> (err_help || show_help, str ^ "\n" ^ err_str)
-  ) (false,"") errs
-  end
-
-module Dir = struct
-  module Error = struct
-    let nondirectory_segment path =
-      `Error (false, "path "^path^" is not a directory")
-  end
-
-  let rec make_exist ~perm path =
-    try Unix.access path []; None
-    with
-    | Unix.Unix_error (Unix.ENOENT, _, _) ->
-      let dir = Filename.dirname path in
-      begin match make_exist ~perm dir with
-      | None ->
-        Unix.(mkdir path perm);
-        None
-      | Some err -> Some err
-      end
-    | Unix.Unix_error (Unix.ENOTDIR, _, _) ->
-      Some (Error.nondirectory_segment path)
-
-  let make_dirs_exist ~perm =
-    List.fold_left (fun err_opt path ->
-      match err_opt with None -> make_exist ~perm path | Some err -> Some err
-    ) None
-
-  let name path = match Filename.dirname path with "." -> "" | p -> p
-end
+module Error = ReqtraceUtil.Error
+module Dir = ReqtraceUtil.Dir
 
 let (/) = Filename.concat
 
@@ -133,15 +67,16 @@ let run_dir ?strip ~rfcs in_dir out_dir =
     "%4d cmt under %s\n" cmt_count in_dir;
   match List.fold_left (fun (units,errs) rel_cmt ->
       let rel_dir = Dir.name rel_cmt in
-      let xml_file = xml_index_of_cmt rel_cmt in
+      let xml_file = xml_filename_of_cmt rel_cmt in
       match extract ?strip ~rfcs (in_dir / rel_cmt) out_dir (rel_dir / xml_file)
       with
+      | `Ok unit when unit.ReqtraceTypes.Refs.refs = [] -> (units, errs)
       | `Ok unit -> (unit::units, errs)
       | `Not_an_impl -> (units, errs)
       | `Error err -> (units, (`Error err)::errs)
     ) ([],[]) cmts
   with
-  | _, ((_::_) as errs) -> combine_errors errs
+  | _, ((_::_) as errs) -> ReqtraceUtil.combine_errors errs
   | units, [] -> `Ok (`Dir out_dir)
 
 let run strip rfcs output path =

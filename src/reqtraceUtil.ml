@@ -16,6 +16,47 @@
  *
  *)
 
+module Error = struct
+  let source_missing path =
+    `Error (false, "source "^path^" does not exist")
+
+  let dir_to_file dir file =
+    `Error (false, "can't process directory "^dir^" into file "^file)
+
+  (*
+  let unknown_file_type path =
+    `Error (false, "don't know how to handle file "^path)
+    `Error (false, "source "^in_file^" is not a cmt")
+
+  let not_an_interface path =
+    `Error (false, path^" is not an interface")
+
+  let wrong_version_interface path =
+    `Error (false, path^" has the wrong format version")
+
+  let not_an_implementation path =
+    `Error (false, path^" is not an implementation")
+
+  let wrong_version_implementation path =
+    `Error (false, path^" has the wrong format version")
+
+  let corrupted_interface path =
+    `Error (false, path^" is corrupted")
+
+  let not_a_typedtree path =
+    `Error (false, path^" is not a typed tree")
+  *)
+
+  let read_cmt_failed path msg =
+    `Error (false, path ^ ": failed to load cmt: " ^ msg)
+end
+
+let combine_errors errs = `Error
+  begin List.fold_left (fun (show_help,str) -> function
+  | `Error (err_help,err_str) -> (err_help || show_help, str ^ "\n" ^ err_str)
+  ) (false,"") errs
+  end
+
 let map_ret f = function
   | `Ok v -> `Ok (f v)
   | `Error (help,msg) as err -> err

@@ -97,7 +97,7 @@ let body_of_doc doc =
   let index = clause_index doc in
   make_tag "body" ([], p_links :: h1 :: sections @ [index])
 
-let of_rfc ~normal_uri ~uri_of_path ~css ~js rfc =
+let of_rfc ~normal_uri ~uri_of_path ~css ~js ~refs rfc =
   let title = Printf.sprintf "RFC %d: %s" rfc.number rfc.title in
   let head =
     make_tag "head" ([], [

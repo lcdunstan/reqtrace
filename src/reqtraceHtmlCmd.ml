@@ -134,8 +134,8 @@ let check_create_safe index out_dir = CodocIndex.(
 )
 *)
 
+(*
 let render_dir ~index in_index out_dir scheme css =
-  (*
   let root = Filename.dirname in_index in
   let path = Filename.basename in_index in
   let idx = CodocIndex.read root path in
@@ -180,8 +180,8 @@ let render_dir ~index in_index out_dir scheme css =
       ()
     ) idxs;
     flush_cache idx;
-    *)
-  `Ok ()
+    `Ok ()
+     *)
 
 let maybe_copy path target_dir =
   let file_name = Filename.basename path in
@@ -214,32 +214,61 @@ let render_with_js share js_dir render_f = function
     | `Ok js -> render_f js
     | `Error _ as err -> err
 
-let render_rfc rfc out_file scheme css js =
+let render_rfc rfc out_file scheme css js refs =
   let normal_uri = normal_uri ~scheme in
   let uri_of_path = uri_of_path ~scheme in
-  let html = ReqtraceDocHtml.of_rfc ~normal_uri ~uri_of_path ~css ~js rfc in
+  let html = ReqtraceDocHtml.of_rfc ~normal_uri ~uri_of_path ~css ~js ~refs rfc in
   write_html out_file html;
   `Ok ()
 
-let render_file in_file out_file scheme css js share =
+let render_file in_file out_file scheme css js share refs =
   let css_js_dir = Filename.dirname out_file in
-  let root = Filename.dirname in_file in
-  let path = Filename.basename in_file in
-  let rfc = ReqtraceDocXml.read root path in
+  let rfc = ReqtraceDocXml.read in_file in
   render_with_js share css_js_dir (fun js ->
       render_with_css share css_js_dir (fun css ->
-          render_rfc rfc out_file scheme css js) css) js
+          render_rfc rfc out_file scheme css js refs) css) js
 
-let run output path scheme css js share =
+let only_req file path =
+  Filename.check_suffix file ".req"
+
+let all_reqs dir =
+  ReqtraceUtil.foldp_paths (fun lst rel_req -> rel_req::lst) only_req [] dir
+
+let load_refs_dir dir =
+  let files = all_reqs dir in
+  let file_count = List.length files in
+  Printf.printf
+    "%4d .req under %s\n" file_count dir;
+  match List.fold_left (fun (units,errs) rel_file ->
+      match ReqtraceRefXml.read (dir / rel_file) with
+      | `Ok unit -> (unit::units, errs)
+      | `Error err -> (units, (`Error err)::errs)
+    ) ([],[]) files
+  with
+  | _, ((_::_) as errs) -> ReqtraceUtil.combine_errors errs
+  | units, [] -> `Ok units
+
+let load_refs = function
+  | None -> `Ok []
+  | Some (`Missing path) -> Error.source_missing path
+  | Some (`File path) ->
+    begin match ReqtraceRefXml.read path with
+      | `Ok unit -> `Ok [unit]
+      | `Error _ as err -> err
+    end
+  | Some (`Dir path) ->
+    load_refs_dir path
+
+let run_with_refs output path scheme css js share refs =
   match path, output with
   | `Missing path, _ -> Error.source_missing path
   | `File in_file, None ->
-    render_file in_file (html_name_of in_file) scheme css js share
+    render_file in_file (html_name_of in_file) scheme css js share refs
   | `File in_file, Some (`Missing out_file | `File out_file) ->
-    render_file in_file out_file scheme css js share
+    render_file in_file out_file scheme css js share refs
   | `File in_file, Some (`Dir out_dir) ->
     let html_name = html_name_of (Filename.basename in_file) in
-    render_file in_file (out_dir / html_name) scheme css js share
+    render_file in_file (out_dir / html_name) scheme css js share refs
   | `Dir in_dir, None ->
     `Error (false, "unimplemented")
   | `Dir in_dir, Some (`Missing out_dir | `Dir out_dir) ->
@@ -283,3 +312,7 @@ let run output path scheme css js share =
     end
   *)
 
+let run output path scheme css js share ref_path =
+  match load_refs ref_path with
+  | `Ok refs -> run_with_refs output path scheme css js share refs
+  | `Error _ as err -> err

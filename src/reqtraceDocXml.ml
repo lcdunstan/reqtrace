@@ -21,24 +21,24 @@ let xmlns = ""
 
 module StringMap = Map.Make(String)
 
-let empty root path = {
+let empty path = {
   number = 0;
   title = "";
   sections = [];
 }
 
-let fail_xml msg xml =
+let fail_xml msg xml path =
   let line, col = Xmlm.pos xml in
-  failwith (Printf.sprintf "%d: %s (col %d)" line msg col)
+  failwith (Printf.sprintf "%s:%d: %s (col %d)" path line msg col)
 
-let rec require_attr attrs name pos =
+let rec require_attr attrs name fail_xml =
   match attrs with
   | ((ns,attr_name),value) :: tl ->
     if ns = xmlns && attr_name = name then
       value
     else
-      require_attr tl name pos
-  | [] -> fail_xml ("Missing required attribute " ^ name) pos
+      require_attr tl name fail_xml
+  | [] -> fail_xml ("Missing required attribute " ^ name)
 
 let rec optional_attr attrs name =
   match attrs with
@@ -49,18 +49,17 @@ let rec optional_attr attrs name =
       optional_attr tl name
   | [] -> None
 
-let rec of_xml root path xml =
-  let fail_xml msg =
-    fail_xml msg xml
-  in
-  (* Returns a string *)
-  let rec read_text text =
-    match Xmlm.input xml with
-    | `El_start _ -> fail_xml "expected text only"
-    | `Data data -> read_text (text ^ data)
-    | `Dtd _ -> read_text text
-    | `El_end -> text
-  in
+(* Returns a string *)
+let rec read_text text xml path : string =
+  match Xmlm.input xml with
+  | `El_start _ -> fail_xml "expected text only" xml path
+  | `Data data -> read_text (text ^ data) xml path
+  | `Dtd _ -> read_text text xml path
+  | `El_end -> text
+
+let rec of_xml path xml =
+  let fail_xml msg = fail_xml msg xml path in
+  let read_text text = read_text text xml path in
   (* Returns a list of notes, in reverse order *)
   let rec read_notes notes =
     match Xmlm.input xml with
@@ -89,8 +88,8 @@ let rec of_xml root path xml =
   let rec read_clause (clause:clause) =
     match Xmlm.input xml with
     | `El_start ((ns,"linesub"),attrs) when ns = xmlns ->
-      let start_offset = require_attr attrs "start" xml in
-      let end_offset = require_attr attrs "end" xml in
+      let start_offset = require_attr attrs "start" fail_xml in
+      let end_offset = require_attr attrs "end" fail_xml in
       let text = read_text "" in
       let line = { start_offset = int_of_string start_offset; end_offset = int_of_string end_offset; text; } in
       read_clause { clause with lines = line :: clause.lines }
@@ -104,8 +103,8 @@ let rec of_xml root path xml =
   let rec read_paragraph paragraph =
     match Xmlm.input xml with
     | `El_start ((ns,"line"),attrs) when ns = xmlns ->
-      let start_offset = require_attr attrs "start" xml in
-      let end_offset = require_attr attrs "end" xml in
+      let start_offset = require_attr attrs "start" fail_xml in
+      let end_offset = require_attr attrs "end" fail_xml in
       let text = read_text "" in
       let line = { start_offset = int_of_string start_offset; end_offset = int_of_string end_offset; text; } in
       read_paragraph { paragraph with lines = line :: paragraph.lines }
@@ -148,7 +147,7 @@ let rec of_xml root path xml =
   let rec read_sections sections =
     match Xmlm.input xml with
     | `El_start ((ns,"section"),attrs) when ns = xmlns ->
-      let name = require_attr attrs "name" xml in
+      let name = require_attr attrs "name" fail_xml in
       let id = optional_attr attrs "id" in
       let section_rev = read_section { name; id; paras=[]; } in
       let section = { section_rev with paras = List.rev section_rev.paras } in
@@ -171,25 +170,20 @@ let rec of_xml root path xml =
   (* Returns an rfc record *)
   let read_root = function
     | ((ns,"rfc"),attrs) when ns = xmlns ->
-      let number = require_attr attrs "number" xml in
-      let title = require_attr attrs "title" xml in
+      let number = require_attr attrs "number" fail_xml in
+      let title = require_attr attrs "title" fail_xml in
       read_rfc { number = int_of_string number; title; sections = [] }
     | _ -> fail_xml "expected root node <rfc num='nnn' title='...'>"
   in
   match Xmlm.input xml with
   | `El_start tag -> read_root tag
-  | `El_end -> empty root path
-  | `Data _ | `Dtd _ -> of_xml root path xml
+  | `El_end -> empty path
+  | `Data _ | `Dtd _ -> of_xml path xml
 
-let read root path =
-  let (/) = Filename.concat in
-  let in_path = root / path in
-  if Sys.file_exists in_path
-  then
-    let ic = open_in in_path in
-    let input = Xmlm.make_input (`Channel ic) in
-    let rfc = of_xml root path input in
-    let () = close_in ic in
-    rfc
-  else empty root path
+let read path =
+  let ic = open_in path in
+  let input = Xmlm.make_input (`Channel ic) in
+  let rfc = of_xml path input in
+  let () = close_in ic in
+  rfc
 
