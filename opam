@@ -16,6 +16,8 @@ install: [
 ]
 #remove: [["ocamlfind" "remove" "reqtrace"]]
 build-test: [
+  ["ocaml" "setup.ml" "-configure" "--prefix" prefix "--enable-tests"]
+  ["ocaml" "setup.ml" "-build"]
   ["ocaml" "setup.ml" "-test"]
 ]
 depends: [
