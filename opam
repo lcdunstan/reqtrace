@@ -27,6 +27,7 @@ depends: [
   "ezxmlm"
   "ppx_tools"    {>= "0.99.1"}
   "ounit"        {test}
+  "cstruct"      {test}
   "uri"
 ]
 available: [ocaml-version >= "4.02.0"]
