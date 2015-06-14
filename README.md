@@ -93,7 +93,7 @@ structure. The combine the specification XML with the references
 to generate an annotated specification in HTML format:
 
 ```
-rfc_notes.py example_spec.xml --ref=_build --base=https://github.com/foo/bar/blob/master/ --html=example_spec.html
+reqtrace html example_spec.xml --ref=_build --base=https://github.com/foo/bar/blob/master/ --out=example_spec.html
 ```
 
 # Support for camlp4
