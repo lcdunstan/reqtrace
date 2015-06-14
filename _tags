@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: da3ab2fd9a0af5894d3f29dc11bebc25)
+# DO NOT EDIT (digest: 98eda67976f78eb23b905ee5a727dae6)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -14,10 +14,6 @@ true: annot, bin_annot
 ".git": not_hygienic
 "_darcs": -traverse
 "_darcs": not_hygienic
-# Executable ppx_reqtrace
-<src/ppx_reqtrace.{native,byte}>: package(compiler-libs)
-<src/ppx_reqtrace.{native,byte}>: package(compiler-libs.common)
-<src/ppx_reqtrace.{native,byte}>: package(ezxmlm)
 # Executable reqtrace
 <src/reqtrace.{native,byte}>: package(cmdliner)
 <src/reqtrace.{native,byte}>: package(compiler-libs)
