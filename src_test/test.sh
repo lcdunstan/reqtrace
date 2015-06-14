@@ -18,7 +18,7 @@ fi
 cp -f ${indir}/example_req.ml ${outdir}/
 ocamlc -bin-annot -c ${outdir}/example_req.ml
 ${reqtrace} extract --strip=_build/ ${outdir}/example_req.cmt
-./python/rfc_notes.py ${indir}/example_spec.xml --ref=${outdir}/example_req.req --base=https://github.com/infidel/reqtrace/blob/master/ --html=${outdir}/example_spec.html
+${reqtrace} html --share=python ${indir}/example_spec.xml --ref=${outdir}/example_req.req --base=https://github.com/infidel/reqtrace/blob/master/ -o ${outdir}/example_spec.html
 grep coderef ${outdir}/example_spec.html
 
 # Try an example that requires camlp4
@@ -26,6 +26,6 @@ cp -f ${indir}/example_cstruct.ml ${outdir}/
 cstruct_dir=`ocamlfind query cstruct`
 ocamlfind ocamlc -package cstruct -syntax camlp4o -package cstruct.syntax -bin-annot -c ${outdir}/example_cstruct.ml
 ${reqtrace} extract --strip=_build/ --rfc mdns=6762 --rfc edns0=2671 ${outdir}/example_cstruct.cmt
-./python/rfc_notes.py ${indir}/example_spec.xml --ref=${outdir}/example_cstruct.req --base=https://github.com/infidel/reqtrace/blob/master/ --html=${outdir}/example_cstruct.html
+${reqtrace} html --share=python ${indir}/example_spec.xml --ref=${outdir}/example_cstruct.req --base=https://github.com/infidel/reqtrace/blob/master/ -o ${outdir}/example_cstruct.html
 grep coderef ${outdir}/example_cstruct.html
 
