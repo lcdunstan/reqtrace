@@ -6,7 +6,11 @@ outdir=_build/src_test
 
 [ ! -d ${outdir} ] && mkdir ${outdir}
 
-(cd ./python && ./test_parseietf.py)
+if which python3 > /dev/null ; then
+    (cd ./python && ./test_parseietf.py)
+else
+    echo "Warning: python3 is not installed"
+fi
 
 cp ${indir}/example_bad.ml ${outdir}/
 ocamlc -bin-annot -c ${outdir}/example_bad.ml
