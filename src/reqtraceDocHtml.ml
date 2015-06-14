@@ -18,6 +18,12 @@
 open Ezxmlm
 open ReqtraceTypes.RFC
 
+let strings_of_importance = function
+  | Must -> "must", "MUST, SHALL"
+  | Should -> "should", "SHOULD, RECOMMENDED"
+  | May -> "may", "MAY, OPTIONAL"
+  | Not -> "other", "OTHER"
+
 let ns = ""
 let attr name value = ((ns, name), value)
 
@@ -30,6 +36,13 @@ let of_line (line:linesub) =
   (* TODO: start/end/num *)
   make_tag "span" ([attr "class" "line"], [`Data line.text])
 
+let fold_clauses f a rfc =
+  List.fold_left (fun acc s ->
+      List.fold_left (fun acc p ->
+          List.fold_left f acc p.clauses)
+        acc s.paras)
+    a rfc.sections
+
 let body_of_doc doc ref_hash src_base =
   let of_ref target =
     make_tag "div" ([attr "class" "ref"], [
@@ -38,15 +51,19 @@ let body_of_doc doc ref_hash src_base =
       ])
   in
 
-  let open ReqtraceTypes.Refs in
-  let of_reqref { loc={Location.loc_start={Lexing.pos_fname=path; Lexing.pos_lnum=linenum}}; reftype; } =
-    let reftype_str = match reftype with
+  let string_of_reftype reftype path =
+    let open ReqtraceTypes.Refs in
+    match reftype with
       | Impl -> "impl"
       | Test -> "test"
       | Unknown -> match Stringext.find_from path "test" with
         | None -> "impl"
         | Some i -> "test"
-    in
+  in
+
+  let open ReqtraceTypes.Refs in
+  let of_reqref { loc={Location.loc_start={Lexing.pos_fname=path; Lexing.pos_lnum=linenum}}; reftype; } =
+    let reftype_str = string_of_reftype reftype path in
     let text = Printf.sprintf "%s:%d" path linenum in
     make_tag "div" (
       [attr "class" ("coderef " ^ reftype_str);],
@@ -99,22 +116,79 @@ let body_of_doc doc ref_hash src_base =
         opt_attr "id" section.id [],
         [`Data section.name]
       ) in
-    let anchor = make_tag "a" ([
-        attr "name" (match section.id with None -> section.name | Some id -> id)
-      ], []) in
     let paras = if section.name = "Table of Contents" then
         List.map of_toc_paragraph section.paras
       else
         List.map of_paragraph section.paras
     in
     (* TODO: <notes> in <section> *)
-    make_tag "div" ([attr "class" "section"], heading :: anchor :: paras)
+    make_tag "div" ([attr "class" "section"], heading :: paras)
+  in
+
+  let clause_table doc importance =
+    let imp_id, imp_heading = strings_of_importance importance in
+    let headers = ["Clause"; "Notes"; "Impl"; "Test"; "TODO"] in
+    let row_of_clause clause id =
+      let code_refs = Hashtbl.find_all ref_hash id in
+      let has_notes, has_todo = List.fold_left (
+          fun (has_notes, has_todo) child ->
+            match child with
+            | Note note -> (true, has_todo || note.todo)
+            | Ref ref -> (true, has_todo)
+            | CodeRef _ -> (has_notes, has_todo)
+        ) (false, false) clause.notes
+      in
+      let has_impl, has_test =
+        List.fold_left (
+          fun (has_impl, has_test) { loc={Location.loc_start={Lexing.pos_fname=path; Lexing.pos_lnum=linenum}}; reftype; } ->
+            let reftype_str = string_of_reftype reftype path in
+            (has_impl || reftype_str = "impl", has_test || reftype_str = "test")
+        ) (false, false) code_refs
+      in
+      make_tag "tr" ([], [
+          make_tag "td" ([], [
+              make_tag "a" ([attr "href" ("#" ^ id)], [`Data id])
+            ]);
+          make_tag "td" ([], [`Data (if has_notes then "Yes" else "")]);
+          make_tag "td" ([], [`Data (if has_impl then "Yes" else "")]);
+          make_tag "td" ([], [`Data (if has_test then "Yes" else "")]);
+          make_tag "td" ([], [`Data (if has_todo then "Yes" else "")]);
+        ])
+    in
+    let rows_rev = fold_clauses (fun l clause ->
+        if clause.importance = importance then
+          match clause.id with
+          | None -> l
+          | Some id -> (row_of_clause clause id) :: l
+        else
+          l
+      ) [] doc
+    in
+    make_tag "div" (
+      [
+        attr "class" "index";
+        attr "id" ("clauses_" ^ imp_id)
+      ],
+      [
+        make_tag "h2" ([], [`Data imp_heading]);
+        make_tag "table" (
+          [attr "class" "index"],
+          [
+            make_tag "thead" ([], List.map (fun h -> make_tag "th" ([], [`Data h])) headers);
+            make_tag "tbody" ([], List.rev rows_rev);
+          ])
+      ])
   in
 
   let clause_index doc =
     make_tag "div" (
       [attr "id" "index_of_clauses"],
-      [])
+      [
+        make_tag "h1" ([], [`Data "Index of Clauses"]);
+        clause_table doc Must;
+        clause_table doc Should;
+        clause_table doc May;
+      ])
   in
 
   let p_links = make_tag "p" ([], [

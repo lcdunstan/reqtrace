@@ -84,6 +84,13 @@ let rec of_xml path xml =
     | `Data _ | `Dtd _ -> read_notes notes
     | `El_end -> notes
   in
+  let importance_of_attr = function
+    | Some "must" -> Must
+    | Some "should" -> Should
+    | Some "may" -> May
+    | Some _ -> Not
+    | None -> Not
+  in
   (* Returns a clause record, with line substrings and notes in reverse order *)
   let rec read_clause (clause:clause) =
     match Xmlm.input xml with
@@ -110,7 +117,8 @@ let rec of_xml path xml =
       read_paragraph { paragraph with lines = line :: paragraph.lines }
     | `El_start ((ns,"clause"),attrs) when ns = xmlns ->
       let id = optional_attr attrs "id" in
-      let clause_rev = read_clause { id; lines=[]; notes=[] } in
+      let importance = importance_of_attr (optional_attr attrs "importance") in
+      let clause_rev = read_clause { id; lines=[]; notes=[]; importance; } in
       let clause = { clause_rev with lines = List.rev clause_rev.lines; notes = List.rev clause_rev.notes; } in
       read_paragraph { paragraph with clauses = clause :: paragraph.clauses }
     | `El_start _ -> fail_xml "expected <line> or <clause> in <paragraph>"

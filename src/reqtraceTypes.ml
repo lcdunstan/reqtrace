@@ -34,10 +34,13 @@ module RFC = struct
     | Ref of string
     | CodeRef of string
 
+  type importance = Must | Should | May | Not
+
   type clause = {
     id: elemid option;
     lines: linesub list;
     notes: notes_child list;
+    importance: importance;
   }
 
   type paragraph = {
