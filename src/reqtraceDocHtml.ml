@@ -18,6 +18,15 @@
 open Ezxmlm
 open ReqtraceTypes.RFC
 
+let rec with_sep ?(sep="\n") = function
+  | node::tl -> node :: (`Data sep) :: (with_sep tl)
+  | [] -> []
+
+let with_newlines (node:node) = match node with
+  | `El (((ns,tag),attrs),nodes) ->
+    `El (((ns,tag),attrs),(`Data "\n") :: with_sep nodes)
+  | `Data d as data -> data
+
 let strings_of_importance = function
   | Must -> "must", "MUST, SHALL"
   | Should -> "should", "SHOULD, RECOMMENDED"
@@ -92,11 +101,11 @@ let body_of_doc doc ref_hash src_base =
     in
     let text = String.concat " " (List.map (fun (line:linesub) -> line.text) clause.lines) in
     let notes = (List.map of_notes_child clause.notes) @ (List.map of_reqref code_refs) in
-    let notes_div = if notes = [] then [] else [make_tag "div" ([attr "class" "notes"], notes)] in
+    let notes_div = if notes = [] then [] else [make_tag "div" ([attr "class" "notes"], notes) |> with_newlines] in
     make_tag "div" (
       opt_attr "id" clause.id
         [attr "class" "clause"],
-      label @ notes_div @ [`Data text])
+      label @ notes_div @ [`Data text]) |> with_newlines
   in
 
   let of_toc_paragraph paragraph =
@@ -108,7 +117,7 @@ let body_of_doc doc ref_hash src_base =
     let lines = List.map of_line paragraph.lines in
     let clauses = List.map of_clause paragraph.clauses in
     (* TODO: <notes> in <paragraph> *)
-    make_tag "div" ([attr "class" "paragraph"], lines @ clauses)
+    make_tag "div" ([attr "class" "paragraph"], lines @ clauses) |> with_newlines
   in
 
   let of_section section =
@@ -122,7 +131,7 @@ let body_of_doc doc ref_hash src_base =
         List.map of_paragraph section.paras
     in
     (* TODO: <notes> in <section> *)
-    make_tag "div" ([attr "class" "section"], heading :: paras)
+    make_tag "div" ([attr "class" "section"], heading :: paras) |> with_newlines
   in
 
   let clause_table doc importance =
@@ -175,9 +184,9 @@ let body_of_doc doc ref_hash src_base =
           [attr "class" "index"],
           [
             make_tag "thead" ([], List.map (fun h -> make_tag "th" ([], [`Data h])) headers);
-            make_tag "tbody" ([], List.rev rows_rev);
-          ])
-      ])
+            make_tag "tbody" ([], List.rev rows_rev) |> with_newlines;
+          ]) |> with_newlines
+      ]) |> with_newlines
   in
 
   let clause_index doc =
@@ -188,7 +197,7 @@ let body_of_doc doc ref_hash src_base =
         clause_table doc Must;
         clause_table doc Should;
         clause_table doc May;
-      ])
+      ]) |> with_newlines
   in
 
   let p_links = make_tag "p" ([], [
@@ -198,7 +207,7 @@ let body_of_doc doc ref_hash src_base =
   let h1 = make_tag "h1" ([], [`Data doc.title]) in
   let sections = List.map of_section doc.sections in
   let index = clause_index doc in
-  make_tag "body" ([], p_links :: h1 :: sections @ [index])
+  make_tag "body" ([], p_links :: h1 :: sections @ [index]) |> with_newlines
 
 let index_of_refs refs rfc =
   let open ReqtraceTypes.Refs in
@@ -239,5 +248,5 @@ let of_rfc ~css ~js ~refs ~src_base rfc =
       ])
   in
   let body = body_of_doc rfc ref_hash src_base in
-  make_tag "html" ([], [head; body])
+  make_tag "html" ([], [head; body]) |> with_newlines
 
