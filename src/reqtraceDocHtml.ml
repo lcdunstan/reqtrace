@@ -95,6 +95,7 @@ let body_of_doc doc ref_hash src_base =
   in
 
   let of_clause (clause:clause) =
+    let imp_id, _ = strings_of_importance clause.importance in
     let label, code_refs = match clause.id with
       | None -> [], []
       | Some id -> [make_tag "span" ([attr "class" "label"], [`Data id])], Hashtbl.find_all ref_hash id
@@ -104,7 +105,7 @@ let body_of_doc doc ref_hash src_base =
     let notes_div = if notes = [] then [] else [make_tag "div" ([attr "class" "notes"], notes) |> with_newlines] in
     make_tag "div" (
       opt_attr "id" clause.id
-        [attr "class" "clause"],
+        [attr "class" ("clause " ^ imp_id)],
       label @ notes_div @ [`Data text]) |> with_newlines
   in
 
