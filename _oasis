@@ -17,13 +17,6 @@ Plugins:     META (0.4)
 BuildTools:  ocamlbuild
 OCamlVersion: >= 4.02
 
-#Executable ppx_reqtrace
-#  Path:               src
-#  MainIs:             ppx_reqtrace.ml
-#  #Custom:             true
-#  CompiledObject:     best
-#  BuildDepends:       compiler-libs, compiler-libs.common, ezxmlm
-
 Executable reqtrace
   Path:               src
   MainIs:             reqtrace.ml
