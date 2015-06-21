@@ -22,7 +22,7 @@ Executable reqtrace
   MainIs:             reqtrace.ml
   #Custom:             true
   CompiledObject:     best
-  BuildDepends:       compiler-libs, compiler-libs.common, ezxmlm, cmdliner, stringext, unix, uri
+  BuildDepends:       compiler-libs, compiler-libs.common, xmlm, cmdliner, stringext, unix, uri
 
 Test test
   Command:            src_test/test.sh $reqtrace

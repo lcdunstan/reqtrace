@@ -15,12 +15,16 @@
  *
  *)
 
-open Ezxmlm
 open ReqtraceTypes.Refs
 
 let ns = "https://github.com/infidel/reqtrace"
 
 let attr name value = ((ns, name), value)
+
+type node = ('a Xmlm.frag as 'a) Xmlm.frag
+
+let make_tag tag (attrs,nodes) : node =
+  `El (((ns,tag),attrs),nodes)
 
 let of_docid docid =
   match docid with
@@ -80,7 +84,7 @@ let of_impl_unit ?strip {docs; refs} =
   make_tag "unit" (attrs, nodes)
 
 let output_impl_unit ?strip xmlout impl =
-  to_output xmlout (None, of_impl_unit ?strip impl)
+  Xmlm.output_doc_tree (fun node -> node) xmlout (None, of_impl_unit ?strip impl)
 
 
 let require_attr = ReqtraceDocXml.require_attr

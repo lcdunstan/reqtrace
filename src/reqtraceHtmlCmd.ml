@@ -54,10 +54,9 @@ let pathloc ?pkg_root scheme unit = CodocDocHtml.pathloc
 *)
 
 let write_html html_file html =
-  let open Ezxmlm in
   let out_file = open_out html_file in
   let xout = Xmlm.make_output (`Channel out_file) in
-  to_output xout (None, html);
+  Xmlm.output_doc_tree (fun node -> node) xout (None, html);
   close_out out_file
 
 (*

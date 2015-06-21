@@ -15,8 +15,12 @@
  *
  *)
 
-open Ezxmlm
 open ReqtraceTypes.RFC
+
+type node = ('a Xmlm.frag as 'a) Xmlm.frag
+
+let make_tag tag (attrs,nodes) : node =
+  `El ((("",tag),attrs),nodes)
 
 let rec with_sep ?(sep="\n") = function
   | node::tl -> node :: (`Data sep) :: (with_sep tl)

@@ -24,7 +24,7 @@ depends: [
   "ocamlfind"    {build}
   "stringext"
   "cmdliner"
-  "ezxmlm"
+  "xmlm"
   "ounit"        {test}
   "cstruct"
   "uri"
